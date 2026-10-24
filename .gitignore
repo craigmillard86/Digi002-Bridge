@@ -1,0 +1,13 @@
+.build/
+build/
+.swiftpm/
+.DS_Store
+
+# Avid's and Neyrinck's files are copyright and for lookup only (reference/README.md).
+reference/avid-driver-11.1.5/
+reference/protools-10.3.10/
+reference/neyrinck-helper/
+
+# Session logs from running the bridge are large and local. The probe captures stay:
+# the tests cite them as fixtures.
+captures/bridge-run-*.log

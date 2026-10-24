@@ -1,0 +1,5 @@
+# SEL colour confirmation: row 01 alone vs rows 00+01, channels 1 and 8. name | on | off
+step 1, select 1 | 90 01 40 | 90 00 00 90 01 00
+step 2, select 1 | 90 00 40 90 01 40 | 90 00 00 90 01 00
+step 3, select 8 | 90 01 47 | 90 00 07 90 01 07
+step 4, select 8 | 90 00 47 90 01 47 | 90 00 07 90 01 07

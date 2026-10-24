@@ -1,0 +1,7 @@
+# HUI-format probes for encoder rings, scribble strips and meters. name | on | off
+step 1 | B0 10 2B | B0 10 00
+step 2 | B0 10 06 | B0 10 00
+step 3 | F0 00 00 66 05 00 10 00 54 45 53 54 F7 | F0 00 00 66 05 00 10 00 20 20 20 20 F7
+step 4 | F0 00 00 66 05 00 10 08 54 45 53 54 F7 | F0 00 00 66 05 00 10 08 20 20 20 20 F7
+step 5 | A0 00 0C | A0 00 00
+step 6 | A0 00 1C | A0 00 10

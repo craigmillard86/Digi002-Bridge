@@ -1,0 +1,6 @@
+# Encoder ring probes on the encoder's own CC, plus a MIDI identity request. name | on | off
+step 1 | B0 40 7F | B0 40 00
+step 2 | B0 40 40 | B0 40 00
+step 3 | B0 40 01 | B0 40 00
+step 4 | B0 10 7F | B0 10 00
+step 5 | F0 7E 7F 06 01 F7 | F0 7E 7F 06 01 F7

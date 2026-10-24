@@ -1,0 +1,12 @@
+# From the Pro Tools 10 Digi002 bundle: ring = F0 13 00 00 strip hi lo F7, display = F0 13 00 40 strip 7C hibits c0 c1 c2 c3 F7. name | on | off
+ring 4, LED 1 | F0 13 00 00 03 00 01 F7 | F0 13 00 00 03 00 00 F7
+ring 1, bar to 7 | F0 13 00 00 00 00 7F F7 | F0 13 00 00 00 00 00 F7
+ring 2, upper seven | F0 13 00 00 01 7F 00 F7 | F0 13 00 00 01 00 00 F7
+ring 1, all plus red | F0 13 00 00 20 7F 7F F7 | F0 13 00 00 00 00 00 F7
+ring 1, flag 40, bar to 7 | F0 13 00 00 40 00 7F F7 | F0 13 00 00 00 00 00 F7
+ring 8, LED 8 | F0 13 00 00 07 01 00 F7 | F0 13 00 00 07 00 00 F7
+display 1, TEST, mode 7C | F0 13 00 40 00 7C 00 54 45 53 54 F7 | F0 13 00 40 00 7C 00 20 20 20 20 F7
+display 1, abcd, mode 78 | F0 13 00 40 00 78 00 61 62 63 64 F7 | F0 13 00 40 00 78 00 20 20 20 20 F7
+display 2, TEST | F0 13 00 40 01 7C 00 54 45 53 54 F7 | F0 13 00 40 01 7C 00 20 20 20 20 F7
+display 9, MAIN | F0 13 00 40 08 7C 00 4D 41 49 4E F7 | F0 13 00 40 08 7C 00 20 20 20 20 F7
+display 10, TIME | F0 13 00 40 09 7C 00 54 49 4D 45 F7 | F0 13 00 40 09 7C 00 20 20 20 20 F7

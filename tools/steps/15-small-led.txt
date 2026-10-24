@@ -1,0 +1,10 @@
+# Small LED above SEL: untried rows in channel 1's column. name | on | off
+row 4 | 90 04 40 | 90 04 00
+row 6 | 90 06 40 | 90 06 00
+row 7 | 90 07 40 | 90 07 00
+row 8 | 90 08 40 | 90 08 00
+row 9 | 90 09 40 | 90 09 00
+row 10 | 90 0A 40 | 90 0A 00
+row 11 | 90 0B 40 | 90 0B 00
+row 12 | 90 0C 40 | 90 0C 00
+row 13 | 90 0D 40 | 90 0D 00

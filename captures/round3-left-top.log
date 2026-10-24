@@ -1,0 +1,78 @@
+# capture log started 2026-10-24T08:35:41Z
+# source:      Avid 002 Port 3 (Control)
+# destination: Avid 002 Port 3 (Control)
+# columns: ms since start, IN/OUT/ECHO/LABEL, bytes in hex or label text
+# fader echo: on
+  6536.911  LABEL  arrow left, second try
+ 10268.168  IN     90 05 4D
+ 10732.168  IN     90 05 0D
+ 12784.823  LABEL  E Q
+ 16340.125  IN     90 00 4B
+ 16716.124  IN     90 00 0B
+ 17662.630  LABEL  dynamics
+ 20156.137  IN     90 01 4B
+ 20604.150  IN     90 01 0B
+ 22847.630  LABEL  insert, top row
+ 24812.175  IN     90 02 4B
+ 25316.167  IN     90 02 0B
+ 28714.213  LABEL  pan send, top row
+ 30924.108  IN     90 03 4B
+ 31332.118  IN     90 03 0B
+ 34739.742  LABEL  page left
+ 37300.142  IN     90 04 4B
+ 37686.102  IN     90 04 0B
+ 39867.181  LABEL  page right
+ 42012.763  IN     90 05 4B
+ 42364.798  IN     90 05 0B
+ 44939.926  LABEL  master bypass
+ 47604.755  IN     90 06 4B
+ 48012.776  IN     90 06 0B
+ 50431.141  LABEL  escape
+ 52732.800  IN     90 07 4B
+ 53060.794  IN     90 07 0B
+ 55397.942  LABEL  pan, left
+ 60833.009  LABEL  send, left
+ 66289.910  LABEL  insert, left
+ 71841.707  LABEL  A
+ 72068.744  IN     90 02 4A
+ 72420.730  IN     90 02 0A
+ 74772.780  IN     90 03 4A
+ 75190.781  IN     90 03 0A
+ 77021.646  LABEL  B
+ 79228.731  IN     90 04 4A
+ 79540.729  IN     90 04 0A
+ 82216.697  LABEL  C
+ 84396.741  IN     90 05 4A
+ 84732.748  IN     90 05 0A
+ 87456.357  LABEL  D
+ 89532.760  IN     90 06 4A
+ 89900.717  IN     90 06 0A
+ 92604.032  LABEL  E
+ 94725.380  IN     90 07 4A
+ 95053.380  IN     90 07 0A
+ 97744.496  LABEL  display
+102013.404  IN     90 08 4B
+102381.402  IN     90 08 0B
+102761.494  LABEL  meter
+105637.366  IN     90 04 4C
+105901.366  IN     90 04 0C
+107568.055  LABEL  record, next to meter
+110797.361  IN     90 03 4C
+111173.363  IN     90 03 0C
+113607.375  LABEL  enter
+115966.745  IN     90 00 4C
+116269.391  IN     90 00 0C
+118398.121  LABEL  undo
+120397.395  IN     90 01 4C
+120717.354  IN     90 01 0C
+123314.832  LABEL  shift
+128138.498  LABEL  option
+132605.381  IN     90 09 4A
+132941.339  IN     90 09 0A
+133053.789  LABEL  control
+136765.333  IN     90 0A 4A
+137070.046  IN     90 0A 0A
+138069.984  LABEL  command
+140246.019  IN     90 0B 4A
+140549.999  IN     90 0B 0A
+# stopped

@@ -1,0 +1,9 @@
+# Red (15th) ring LED is bit 20 of the strip byte; where do display strips 8 and 9 go? name | on | off
+ring 1, red only | F0 13 00 00 20 00 00 F7 | F0 13 00 00 00 00 00 F7
+ring 4, red only | F0 13 00 00 23 00 00 F7 | F0 13 00 00 03 00 00 F7
+ring 8, red and full bar | F0 13 00 00 27 7F 7F F7 | F0 13 00 00 07 00 00 F7
+ring 1, flag 40 only, bar to 3 | F0 13 00 00 40 00 07 F7 | F0 13 00 00 00 00 00 F7
+display 9, MAIN | F0 13 00 40 08 78 00 4D 41 49 4E F7 | F0 13 00 40 08 78 00 20 20 20 20 F7
+display 10, TIME | F0 13 00 40 09 78 00 54 49 4D 45 F7 | F0 13 00 40 09 78 00 20 20 20 20 F7
+display 11, ELEV | F0 13 00 40 0A 78 00 45 4C 45 56 F7 | F0 13 00 40 0A 78 00 20 20 20 20 F7
+display 1, high bit char | F0 13 00 40 00 79 00 41 42 43 44 F7 | F0 13 00 40 00 78 00 20 20 20 20 F7

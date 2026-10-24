@@ -1,0 +1,29 @@
+# capture log started 2026-10-24T08:07:47Z
+# source:      Avid 002 Port 3 (Control)
+# destination: Avid 002 Port 3 (Control)
+# columns: ms since start, IN/OUT/LABEL, bytes in hex or label text
+  6798.815  LABEL  step 1
+  6799.595  OUT    E0 00 40
+ 12697.121  IN     B0 00 3E
+ 12697.122  IN     B0 20 60
+ 12698.489  IN     90 05 40
+ 12789.133  IN     B0 00 38
+ 12789.133  IN     B0 20 30
+ 12821.122  IN     B0 00 27
+ 12821.122  IN     B0 20 50
+ 12849.126  IN     B0 00 19
+ 12849.126  IN     B0 20 50
+ 12881.122  IN     B0 00 09
+ 12881.123  IN     B0 20 10
+ 12902.458  IN     90 05 00
+ 14908.373  LABEL  step 2
+ 14908.769  OUT    E0 7F 7F
+ 23079.972  LABEL  step 3
+ 23080.525  OUT    B0 20 00 B0 00 40
+ 31246.693  LABEL  step 4
+ 31247.094  OUT    B0 00 7F
+ 39456.864  LABEL  step 5
+ 39457.270  OUT    B0 00 40 20 00
+ 47718.655  LABEL  step 6
+ 47719.079  OUT    B0 20 70 B0 00 7F
+# stopped

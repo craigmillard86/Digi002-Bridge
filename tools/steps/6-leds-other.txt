@@ -1,0 +1,52 @@
+# LED sweep 2: all other buttons, by grid column. name | on | off
+pan, left | 90 00 4A | 90 00 0A
+send, left | 90 01 4A | 90 01 0A
+insert, left | 90 02 4A | 90 02 0A
+A | 90 03 4A | 90 03 0A
+B | 90 04 4A | 90 04 0A
+C | 90 05 4A | 90 05 0A
+D | 90 06 4A | 90 06 0A
+E | 90 07 4A | 90 07 0A
+shift | 90 08 4A | 90 08 0A
+option | 90 09 4A | 90 09 0A
+control | 90 0A 4A | 90 0A 0A
+command | 90 0B 4A | 90 0B 0A
+E Q | 90 00 4B | 90 00 0B
+dynamics | 90 01 4B | 90 01 0B
+insert, top row | 90 02 4B | 90 02 0B
+pan send, top row | 90 03 4B | 90 03 0B
+page left | 90 04 4B | 90 04 0B
+page right | 90 05 4B | 90 05 0B
+master bypass | 90 06 4B | 90 06 0B
+escape | 90 07 4B | 90 07 0B
+display | 90 08 4B | 90 08 0B
+enter | 90 00 4C | 90 00 0C
+undo | 90 01 4C | 90 01 0C
+record, next to meter | 90 03 4C | 90 03 0C
+meter | 90 04 4C | 90 04 0C
+flip | 90 00 4D | 90 00 0D
+master faders | 90 01 4D | 90 01 0D
+bank | 90 02 4D | 90 02 0D
+nudge | 90 03 4D | 90 03 0D
+zoom | 90 04 4D | 90 04 0D
+arrow left | 90 05 4D | 90 05 0D
+arrow right | 90 06 4D | 90 06 0D
+arrow up | 90 07 4D | 90 07 0D
+arrow down | 90 08 4D | 90 08 0D
+F 1 | 90 09 4D | 90 09 0D
+F 2 | 90 0A 4D | 90 0A 0D
+F 3 | 90 0B 4D | 90 0B 0D
+F 4 | 90 0C 4D | 90 0C 0D
+F 5 | 90 0D 4D | 90 0D 0D
+plug in | 90 00 4E | 90 00 0E
+mix | 90 01 4E | 90 01 0E
+edit | 90 02 4E | 90 02 0E
+loop play | 90 03 4E | 90 03 0E
+loop record | 90 04 4E | 90 04 0E
+quick punch | 90 05 4E | 90 05 0E
+return to zero | 90 06 4E | 90 06 0E
+rewind | 90 07 4E | 90 07 0E
+fast forward | 90 08 4E | 90 08 0E
+stop | 90 09 4E | 90 09 0E
+play | 90 0A 4E | 90 0A 0E
+record, transport | 90 0B 4E | 90 0B 0E

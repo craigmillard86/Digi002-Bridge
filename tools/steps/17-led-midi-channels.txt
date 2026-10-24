@@ -1,0 +1,17 @@
+# Probe 1: MUTE 1 LED (row 03 col 0) sent on MIDI channels 2-16. Blink or colour by channel? name | on | off
+channel 2 | 91 03 40 | 91 03 00
+channel 3 | 92 03 40 | 92 03 00
+channel 4 | 93 03 40 | 93 03 00
+channel 5 | 94 03 40 | 94 03 00
+channel 6 | 95 03 40 | 95 03 00
+channel 7 | 96 03 40 | 96 03 00
+channel 8 | 97 03 40 | 97 03 00
+channel 9 | 98 03 40 | 98 03 00
+channel 10 | 99 03 40 | 99 03 00
+channel 11 | 9A 03 40 | 9A 03 00
+channel 12 | 9B 03 40 | 9B 03 00
+channel 13 | 9C 03 40 | 9C 03 00
+channel 14 | 9D 03 40 | 9D 03 00
+channel 15 | 9E 03 40 | 9E 03 00
+channel 16 | 9F 03 40 | 9F 03 00
+cleanup | 90 03 00 | 90 03 00

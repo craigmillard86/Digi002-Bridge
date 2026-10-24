@@ -1,0 +1,7 @@
+# Record Ready LED (row 01) and spare velocity bits 10/20 (blink?). name | on | off
+step 1 | 90 01 40 | 90 01 00
+step 2 | 90 01 47 | 90 01 07
+step 3 | 90 03 50 | 90 03 00
+step 4 | 90 03 60 | 90 03 00
+step 5 | 90 03 70 | 90 03 00
+step 6 | 90 03 10 | 90 03 00

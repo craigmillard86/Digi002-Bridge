@@ -1,0 +1,23 @@
+# Round 2: encoders and navigation pad. Turn about three clicks.
+mute 6, second try
+encoder 1 clockwise
+encoder 1 anticlockwise
+encoder 2 clockwise
+encoder 2 anticlockwise
+encoder 3 clockwise
+encoder 3 anticlockwise
+encoder 4 clockwise
+encoder 4 anticlockwise
+encoder 5 clockwise
+encoder 5 anticlockwise
+encoder 6 clockwise
+encoder 6 anticlockwise
+encoder 7 clockwise
+encoder 7 anticlockwise
+encoder 8 clockwise
+encoder 8 anticlockwise
+encoder 1 push
+arrow up
+arrow down
+arrow left
+arrow right

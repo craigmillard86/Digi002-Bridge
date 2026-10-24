@@ -1,0 +1,25 @@
+# Round 1: channel strip buttons, channel by channel
+select 1
+solo 1
+mute 1
+select 2
+solo 2
+mute 2
+select 3
+solo 3
+mute 3
+select 4
+solo 4
+mute 4
+select 5
+solo 5
+mute 5
+select 6
+solo 6
+mute 6
+select 7
+solo 7
+mute 7
+select 8
+solo 8
+mute 8

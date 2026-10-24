@@ -1,0 +1,54 @@
+# capture log started 2026-10-24T12:48:21Z
+# source:      Avid 002 Port 3 (Control)
+# destination: Avid 002 Port 3 (Control)
+# columns: ms since start, IN/OUT/ECHO/LABEL, bytes in hex or label text
+# fader echo: on
+  7987.228  LABEL  channel 2
+  7988.049  OUT    91 03 40
+ 14201.964  OUT    91 03 00
+ 14207.104  LABEL  channel 3
+ 14207.227  OUT    92 03 40
+ 20461.177  OUT    92 03 00
+ 20466.405  LABEL  channel 4
+ 20466.546  OUT    93 03 40
+ 26676.388  OUT    93 03 00
+ 26681.541  LABEL  channel 5
+ 26681.677  OUT    94 03 40
+ 32951.103  OUT    94 03 00
+ 32956.328  LABEL  channel 6
+ 32956.461  OUT    95 03 40
+ 39295.576  OUT    95 03 00
+ 39300.793  LABEL  channel 7
+ 39300.962  OUT    96 03 40
+ 45607.184  OUT    96 03 00
+ 45612.414  LABEL  channel 8
+ 45612.524  OUT    97 03 40
+ 51810.154  OUT    97 03 00
+ 51815.446  LABEL  channel 9
+ 51815.557  OUT    98 03 40
+ 58112.687  OUT    98 03 00
+ 58117.949  LABEL  channel 10
+ 58118.057  OUT    99 03 40
+ 64367.390  OUT    99 03 00
+ 64372.622  LABEL  channel 11
+ 64372.752  OUT    9A 03 40
+ 70703.589  OUT    9A 03 00
+ 70708.726  LABEL  channel 12
+ 70708.847  OUT    9B 03 40
+ 77023.732  OUT    9B 03 00
+ 77028.920  LABEL  channel 13
+ 77029.079  OUT    9C 03 40
+ 83490.582  OUT    9C 03 00
+ 83495.799  LABEL  channel 14
+ 83495.943  OUT    9D 03 40
+ 90026.531  OUT    9D 03 00
+ 90031.771  LABEL  channel 15
+ 90031.932  OUT    9E 03 40
+ 96510.071  OUT    9E 03 00
+ 96515.303  LABEL  channel 16
+ 96515.409  OUT    9F 03 40
+103072.379  OUT    9F 03 00
+103077.597  LABEL  cleanup
+103077.863  OUT    90 03 00
+109082.802  OUT    90 03 00
+# stopped

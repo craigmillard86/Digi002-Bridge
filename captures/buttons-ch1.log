@@ -1,0 +1,8 @@
+# capture log started 2026-10-24T08:02:53Z
+# source:      Avid 002 Port 3 (Control)
+# destination: Avid 002 Port 3 (Control)
+# columns: ms since start, IN/OUT/LABEL, bytes in hex or label text
+     0.669  LABEL  user presses ch1 mute once, then ch1 solo once
+ 23285.763  IN     90 03 40
+ 23455.770  IN     90 03 00
+# stopped

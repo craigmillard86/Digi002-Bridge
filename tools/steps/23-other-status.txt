@@ -1,0 +1,39 @@
+# Test 3: other status bytes on channel 1. name | on | off
+test three, other message types
+pitch bend middle | E0 00 40 | E0 00 00
+pitch bend top | E0 7F 7F | E0 00 00
+program 1 | C0 01 | C0 00
+program 2 | C0 02 | C0 00
+program 3 | C0 03 | C0 00
+program 4 | C0 04 | C0 00
+program 5 | C0 05 | C0 00
+program 6 | C0 06 | C0 00
+program 7 | C0 07 | C0 00
+program 8 | C0 08 | C0 00
+channel pressure 64 | D0 40 | D0 00
+channel pressure 127 | D0 7F | D0 00
+channel pressure 8 | D0 08 | D0 00
+aftertouch 0 | A0 00 40 | A0 00 00
+aftertouch 1 | A0 01 40 | A0 01 00
+aftertouch 2 | A0 02 40 | A0 02 00
+aftertouch 3 | A0 03 40 | A0 03 00
+aftertouch 4 | A0 04 40 | A0 04 00
+aftertouch 5 | A0 05 40 | A0 05 00
+aftertouch 6 | A0 06 40 | A0 06 00
+aftertouch 7 | A0 07 40 | A0 07 00
+aftertouch 8 | A0 08 40 | A0 08 00
+aftertouch 9 | A0 09 40 | A0 09 00
+aftertouch 10 | A0 0A 40 | A0 0A 00
+aftertouch 11 | A0 0B 40 | A0 0B 00
+aftertouch 12 | A0 0C 40 | A0 0C 00
+aftertouch 13 | A0 0D 40 | A0 0D 00
+aftertouch 14 | A0 0E 40 | A0 0E 00
+aftertouch 15 | A0 0F 40 | A0 0F 00
+aftertouch 0 full | A0 00 7F | A0 00 00
+aftertouch 1 full | A0 01 7F | A0 01 00
+aftertouch 2 full | A0 02 7F | A0 02 00
+aftertouch 3 full | A0 03 7F | A0 03 00
+aftertouch 4 full | A0 04 7F | A0 04 00
+aftertouch 5 full | A0 05 7F | A0 05 00
+aftertouch 6 full | A0 06 7F | A0 06 00
+aftertouch 7 full | A0 07 7F | A0 07 00

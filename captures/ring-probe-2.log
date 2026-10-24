@@ -1,0 +1,21 @@
+# capture log started 2026-10-24T08:56:58Z
+# source:      Avid 002 Port 3 (Control)
+# destination: Avid 002 Port 3 (Control)
+# columns: ms since start, IN/OUT/ECHO/LABEL, bytes in hex or label text
+# fader echo: on
+  6595.836  LABEL  step 1
+  6596.539  OUT    B0 40 7F
+ 13770.203  OUT    B0 40 00
+ 13775.396  LABEL  step 2
+ 13775.524  OUT    B0 40 40
+ 20870.168  OUT    B0 40 00
+ 20875.457  LABEL  step 3
+ 20875.589  OUT    B0 40 01
+ 28058.156  OUT    B0 40 00
+ 28063.650  LABEL  step 4
+ 28063.783  OUT    B0 10 7F
+ 35225.224  OUT    B0 10 00
+ 35230.389  LABEL  step 5
+ 35230.547  OUT    F0 7E 7F 06 01 F7
+ 42446.070  OUT    F0 7E 7F 06 01 F7
+# stopped

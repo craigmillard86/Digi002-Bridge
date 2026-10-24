@@ -1,0 +1,8 @@
+# Small LED above SEL: row 04, channels 2-8. name | on | off
+channel 2 | 90 04 41 | 90 04 01
+channel 3 | 90 04 42 | 90 04 02
+channel 4 | 90 04 43 | 90 04 03
+channel 5 | 90 04 44 | 90 04 04
+channel 6 | 90 04 45 | 90 04 05
+channel 7 | 90 04 46 | 90 04 06
+channel 8 | 90 04 47 | 90 04 07

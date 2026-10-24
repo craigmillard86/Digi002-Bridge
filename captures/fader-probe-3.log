@@ -1,0 +1,8 @@
+# capture log started 2026-10-24T08:05:51Z
+# source:      Avid 002 Port 3 (Control)
+# destination: Avid 002 Port 3 (Control)
+# columns: ms since start, IN/OUT/LABEL, bytes in hex or label text
+  4632.522  OUT    B0 00 40 B0 20 00
+  9636.056  OUT    B0 00 7F B0 20 70
+ 14639.723  OUT    B0 00 00 B0 20 00
+# stopped

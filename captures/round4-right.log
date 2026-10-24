@@ -1,0 +1,93 @@
+# capture log started 2026-10-24T08:38:45Z
+# source:      Avid 002 Port 3 (Control)
+# destination: Avid 002 Port 3 (Control)
+# columns: ms since start, IN/OUT/ECHO/LABEL, bytes in hex or label text
+# fader echo: on
+  6554.892  LABEL  arrow left, third try
+  9715.432  IN     90 05 4D
+ 10859.432  IN     90 05 0D
+ 13661.653  LABEL  page right, second try
+ 18275.455  IN     90 05 4B
+ 19043.421  IN     90 05 0B
+ 20874.846  LABEL  pan, left, second try
+ 24547.415  IN     90 00 4A
+ 25043.413  IN     90 00 0A
+ 28436.144  LABEL  send, left, second try
+ 32349.466  IN     90 01 4A
+ 32899.408  IN     90 01 0A
+ 36057.961  LABEL  insert, left, second try
+ 39859.397  IN     90 02 4A
+ 40667.400  IN     90 02 0A
+ 43738.640  LABEL  C, second try
+ 47372.060  IN     90 05 4A
+ 48156.113  IN     90 05 0A
+ 50657.509  LABEL  shift, second try
+ 53892.052  IN     90 08 4A
+ 54444.051  IN     90 08 0A
+ 57614.776  LABEL  flip
+ 60412.103  IN     90 00 4D
+ 60844.089  IN     90 00 0D
+ 63420.307  LABEL  master faders
+ 66116.041  IN     90 01 4D
+ 66580.041  IN     90 01 0D
+ 69823.644  LABEL  bank
+ 72308.087  IN     90 02 4D
+ 72764.035  IN     90 02 0D
+ 75635.713  LABEL  nudge
+ 77596.026  IN     90 03 4D
+ 78092.031  IN     90 03 0D
+ 81473.543  LABEL  zoom
+ 83428.070  IN     90 04 4D
+ 84036.075  IN     90 04 0D
+ 87290.351  LABEL  F 1
+ 90172.019  IN     90 09 4D
+ 90652.013  IN     90 09 0D
+ 93276.813  LABEL  F 2
+ 95332.012  IN     90 0A 4D
+ 95732.063  IN     90 0A 0D
+ 99221.724  LABEL  F 3
+101236.015  IN     90 0B 4D
+101668.007  IN     90 0B 0D
+105256.810  LABEL  F 4
+107100.666  IN     90 0C 4D
+107588.684  IN     90 0C 0D
+111256.328  LABEL  F 5
+113268.665  IN     90 0D 4D
+113772.691  IN     90 0D 0D
+117284.088  LABEL  plug in
+119620.652  IN     90 00 4E
+120092.649  IN     90 00 0E
+123268.050  LABEL  mix
+125268.710  IN     90 01 4E
+125668.691  IN     90 01 0E
+129103.468  LABEL  edit
+131044.657  IN     90 02 4E
+131460.644  IN     90 02 0E
+134867.532  LABEL  loop play
+137220.680  IN     90 03 4E
+137732.634  IN     90 03 0E
+140973.728  LABEL  loop record
+143204.640  IN     90 04 4E
+143604.645  IN     90 04 0E
+147207.507  LABEL  quick punch
+149564.623  IN     90 05 4E
+150012.654  IN     90 05 0E
+153433.445  LABEL  return to zero
+156164.615  IN     90 06 4E
+156708.626  IN     90 06 0E
+159851.651  LABEL  rewind
+161886.612  IN     90 07 4E
+162868.657  IN     90 07 0E
+165845.815  LABEL  fast forward
+168020.606  IN     90 08 4E
+169293.268  IN     90 08 0E
+172183.043  LABEL  stop
+174295.303  IN     90 09 4E
+175293.310  IN     90 09 0E
+178072.655  LABEL  play
+180071.263  IN     90 0A 4E
+180765.257  IN     90 0A 0E
+183912.997  LABEL  record, transport
+186077.258  IN     90 0B 4E
+186815.251  IN     90 0B 0E
+# stopped

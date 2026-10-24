@@ -1,0 +1,30 @@
+# capture log started 2026-10-24T16:14:48Z
+# source:      Avid 002 Port 3 (Control)
+# destination: Avid 002 Port 3 (Control)
+# columns: ms since start, IN/OUT/ECHO/LABEL, bytes in hex or label text
+# fader echo: on
+  6606.822  LABEL  ring 1, red only
+  6607.688  OUT    F0 13 00 00 20 00 00 F7
+ 14459.871  OUT    F0 13 00 00 00 00 00 F7
+ 14460.509  LABEL  ring 4, red only
+ 14460.666  OUT    F0 13 00 00 23 00 00 F7
+ 22311.227  OUT    F0 13 00 00 03 00 00 F7
+ 22311.851  LABEL  ring 8, red and full bar
+ 22312.017  OUT    F0 13 00 00 27 7F 7F F7
+ 30404.486  OUT    F0 13 00 00 07 00 00 F7
+ 30404.959  LABEL  ring 1, flag 40 only, bar to 3
+ 30405.191  OUT    F0 13 00 00 40 00 07 F7
+ 39757.994  OUT    F0 13 00 00 00 00 00 F7
+ 39758.909  LABEL  display 9, MAIN
+ 39759.180  OUT    F0 13 00 40 08 78 00 4D 41 49 4E F7
+ 47661.644  OUT    F0 13 00 40 08 78 00 20 20 20 20 F7
+ 47662.256  LABEL  display 10, TIME
+ 47662.542  OUT    F0 13 00 40 09 78 00 54 49 4D 45 F7
+ 55678.559  OUT    F0 13 00 40 09 78 00 20 20 20 20 F7
+ 55679.060  LABEL  display 11, ELEV
+ 55679.384  OUT    F0 13 00 40 0A 78 00 45 4C 45 56 F7
+ 63597.673  OUT    F0 13 00 40 0A 78 00 20 20 20 20 F7
+ 63598.282  LABEL  display 1, high bit char
+ 63598.504  OUT    F0 13 00 40 00 79 00 41 42 43 44 F7
+ 71899.614  OUT    F0 13 00 40 00 78 00 20 20 20 20 F7
+# stopped

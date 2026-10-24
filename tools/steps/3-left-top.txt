@@ -1,0 +1,27 @@
+# Round 3: console view, left column, display and modifiers
+arrow left, second try
+E Q
+dynamics
+insert, top row
+pan send, top row
+page left
+page right
+master bypass
+escape
+pan, left
+send, left
+insert, left
+A
+B
+C
+D
+E
+display
+meter
+record, next to meter
+enter
+undo
+shift
+option
+control
+command

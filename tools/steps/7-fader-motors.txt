@@ -1,0 +1,9 @@
+# Fader motor sweep: each fader to the top, then the bottom. name | top | bottom
+fader 1 | B0 00 7F 20 70 | B0 00 00 20 00
+fader 2 | B0 01 7F 21 70 | B0 01 00 21 00
+fader 3 | B0 02 7F 22 70 | B0 02 00 22 00
+fader 4 | B0 03 7F 23 70 | B0 03 00 23 00
+fader 5 | B0 04 7F 24 70 | B0 04 00 24 00
+fader 6 | B0 05 7F 25 70 | B0 05 00 25 00
+fader 7 | B0 06 7F 26 70 | B0 06 00 26 00
+fader 8 | B0 07 7F 27 70 | B0 07 00 27 00
