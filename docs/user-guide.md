@@ -7,12 +7,13 @@ explains it from the user's side.
 
 ## Before you start
 
-The bridge program must be running, and Logic must have a Mackie Control set up on the
+The bridge must be running, and Logic must have a Mackie Control set up on the
 "003 MCU" port.
 
-1. Start the bridge: `digi002-bridge` if it is installed (see "Installing" below), or
-   `.build/debug/bridge` in the project folder. It finds the desk's control port and
-   creates the "003 MCU" port.
+1. Open "002 Bridge" (see "Installing" below). It starts the bridge on its own, finds
+   the desk's control port and creates the "003 MCU" port; the window shows whether
+   the desk and Logic were found. The command line version, `digi002-bridge`, does the
+   same without a window.
 2. In Logic, once only: Control Surfaces > Setup > New > Install > Mackie Designs >
    Mackie Control, then set its Output Port and Input Port to "003 MCU". Then in
    Logic Pro > Settings > MIDI > Inputs tick "003 MCU" and untick "Avid 002 Port 3
@@ -42,8 +43,9 @@ move the bank (see Navigation).
 | Rec (the button beside Meter) + SEL | Hold Rec and press a strip's SEL to arm or disarm that track for recording. | The small red Record Ready LED above SEL is on while armed and flashes while Logic records. |
 | Display above the strip | The track name, cut to 4 characters the way Pro Tools did it: "Audio 1" is "Aud1", "Master" is "Mstr". Settings can instead make long names scroll across the display, once or all the time. While you turn an encoder, the value shows for 1.5 seconds ("L23", "C", "-10."), then the name returns. In views where Logic shows only one line, that line is shown. | 4 characters per strip. |
 
-The SEL LED is two-colour. Logic only uses green; red and orange are available for later
-features.
+The SEL LED is two-colour. Logic only uses green. With "Record-armed tracks light SEL
+red" ticked in Settings, an armed track's SEL is red, and orange when it is also
+selected.
 
 ## Encoder assignment buttons
 
@@ -61,7 +63,8 @@ assignment, and display 9 (left of the sample rate LEDs) names it.
 
 Pressing an assignment button a second time usually switches Logic between "one
 parameter on every track" and "every parameter of the selected track". The displays
-follow whichever view is active. The A–E buttons in the left column are not mapped yet.
+follow whichever view is active. The A–E buttons in the left column do whatever you
+choose in Settings; see "A to E, Master Bypass, Master Faders" below.
 
 ## Navigation
 

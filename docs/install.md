@@ -78,7 +78,8 @@ encoder rings; hold Rec (next to Meter) and press SEL to arm a track.
   afterwards, see the previous point.
 - The desk looks stuck while everything else is fine: Bridge > Reconnect Desk (⌘D)
   drops the connection and makes it again.
-- The log in the app window shows what happened; Bridge > Copy Log puts it on the clipboard.
+- The log in the app window (shown while "Debug log" is ticked in Settings) says what
+  happened; Bridge > Copy Log puts it on the clipboard.
   The app also writes every message to ~/Library/Logs/002 Bridge.log (Bridge > Show Log
   File in Finder), with the previous launch kept as "002 Bridge.previous.log". Send that
   file along with any problem report.

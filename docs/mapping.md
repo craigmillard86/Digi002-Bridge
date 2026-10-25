@@ -1,8 +1,8 @@
 # Digi 002 to Logic (Mackie Control) button mapping
 
 What each desk control does in Logic through the bridge. The source of truth is
-`Bridge.buttonMap` and `Bridge.note(for:)` in `Sources/BridgeCore/Bridge.swift`; keep
-this table in step with them. "LED" means Logic's state for that function is shown on
+`Bridge.buttonMap`, `Bridge.shiftButtonMap` and `Bridge.note(for:)` in
+`Sources/BridgeCore/Bridge.swift`; keep this table in step with them. "LED" means Logic's state for that function is shown on
 the desk button. LEDs Logic asks to flash are toggled by the bridge every 0.5 s.
 
 ## Channel strips
@@ -10,7 +10,7 @@ the desk button. LEDs Logic asks to flash are toggled by the bridge every 0.5 s.
 | Desk | Logic (MCU) | LED |
 |---|---|---|
 | Fader 1–8 | channel fader, with touch | motor follows Logic |
-| Display 1–8 | Logic's LCD, squeezed to 4 characters: the track name (abbreviated as Pro Tools did: "Audio 1" → "Aud1"), or a changed value for 1.5 s | — |
+| Display 1–8 | Logic's LCD, squeezed to 4 characters: the track name (abbreviated as Pro Tools did, "Audio 1" → "Aud1", or cut, or scrolling, per the config), or a changed value for 1.5 s | — |
 | Encoder 1–8 | V-Pot (pan by default) | ring follows Logic's V-Pot ring (or the meter, see Meter); Logic's centre flag lights the last LED green |
 | SEL 1–8 | Select | yes |
 | SOLO 1–8 | Solo | yes |
