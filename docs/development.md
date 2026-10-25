@@ -119,6 +119,26 @@ needs right-click > Open (macOS 11–14) or Privacy & Security > Open Anyway (ma
 rate, clock source, optical mode) to replace Avid's 32-bit control panel, if the driver
 exposes them.
 
+## Modules
+
+Swift Package Manager, Swift Testing, no third-party dependencies. The modules keep the
+layers apart so the protocol work is reusable:
+
+| Module | Role |
+|---|---|
+| `MIDIIO` | CoreMIDI client, ports, virtual port, desk detection |
+| `Digi00x` | The desk's protocol: faders, buttons, LEDs, rings, displays |
+| `MCU` | Mackie Control encoder and decoder |
+| `BridgeCore` | Translation between the two, with no I/O; holds the config |
+| `BridgeRuntime` | The running bridge: connections, host watching, desk wake and standby |
+| `bridge` | Command line version |
+| `BridgeApp` | The macOS app |
+| `capture` | Logging and probing tool used to decode the protocol |
+
+The desk's side of things is in docs/003-driver-discovery.md (how it appears through
+Avid's driver) and docs/protocol.md (the captured protocol). Nothing from Avid's driver
+or Pro Tools ships in this project, and Neyrinck's V-Control Pro was not studied.
+
 ## Conventions
 - Plain English in all docs and comments. No marketing tone.
 - Keep the MIDI I/O layer, the 003 protocol layer and the MCU layer as separate

@@ -1,15 +1,28 @@
 # 002 Bridge
 
-002 Bridge lets a Digidesign Digi 002 control surface work with Logic Pro on a modern
-Intel Mac. It is a small macOS app that talks to the desk through the control port of
-Avid's own driver, translates the desk's protocol to Mackie Control, and presents
-itself to Logic as a Mackie Control named "003 MCU". Everything works in both
-directions: the desk drives Logic, and Logic drives the desk's motorised faders, LEDs,
-encoder rings and displays.
+002 Bridge lets a Digidesign Digi 002 control surface work with Logic Pro on an Intel
+Mac. Pro Tools is not needed. The desk's faders, encoders, buttons and displays work
+with Logic the way a Mackie Control does, in both directions: the desk drives Logic,
+and Logic drives the desk's motorised faders, LEDs, encoder rings and displays.
 
-No kernel extension, no private APIs and nothing from Pro Tools: it is plain Swift on
-CoreMIDI, and the desk's protocol is written up in `docs/protocol.md` so it outlives this
-code.
+## How it works
+
+Avid's free 003 Family driver makes the desk appear on the Mac as a MIDI device. One of
+its ports, "Port 3 (Control)", carries the control surface: every fader move and button
+press comes out of it, and fader positions, LED states and display text go into it.
+That port speaks the desk's own language, which only Pro Tools understood.
+
+002 Bridge is a small app that sits on that port. It translates what the desk says into
+Mackie Control, the control surface protocol Logic understands, and offers it to Logic
+on a MIDI port named "003 MCU". Logic treats that port as a Mackie Control and sends its
+feedback back the same way; the bridge turns it into the desk's language and the faders
+move, the LEDs light and the names appear.
+
+    Digi 002  <-- FireWire -->  Avid driver  <-- "Port 3 (Control)" -->  002 Bridge  <-- "003 MCU" -->  Logic Pro
+
+The bridge connects to the desk only while Logic (or whichever host you choose) is
+running, so the desk sleeps in standby the rest of the time. It runs in the background
+from login with a menu bar item, and a window shows what is going on when you want it.
 
 ## What it does
 
@@ -74,21 +87,20 @@ The full version of these steps, with what to do when something does not work, i
 Within a few seconds of opening Logic the desk wakes, the faders move to Logic's
 positions and the displays show the track names.
 
-### Building from source
+### Building it yourself
 
-Only Apple's Command Line Tools are needed (Swift 6, no Xcode):
+If there is no download, or you want the latest version, the app builds with Apple's
+free Command Line Tools and nothing else:
 
 ```
 xcode-select --install
 git clone https://github.com/craigmillard86/Digi002-Bridge.git
 cd Digi002-Bridge
-tools/make-app.sh --install        # builds "002 Bridge.app" into /Applications
-swift test                         # runs the unit tests
+tools/make-app.sh --install
 ```
 
-`tools/make-release.sh` builds the zip that goes on the releases page. For a bridge
-with no window, `tools/install.sh --login` installs the command line version as
-`/usr/local/bin/digi002-bridge` with a launch agent that starts it at login.
+That puts "002 Bridge.app" in Applications. If you would rather have no window at all,
+`tools/install.sh --login` installs a background version that starts at login instead.
 
 ## Using it
 
@@ -111,25 +123,17 @@ running, or the Mac's MIDI server stuck after the desk was power cycled.
 | [docs/config.md](docs/config.md) | Settings and the config file, with every key |
 | [docs/mapping.md](docs/mapping.md) | The desk to Mackie Control mapping, control by control |
 | [docs/protocol.md](docs/protocol.md) | The Digi 002 control surface protocol, captured from the desk |
-| [docs/003-driver-discovery.md](docs/003-driver-discovery.md) | How the desk appears through Avid's driver |
-| [docs/development.md](docs/development.md) | The project brief, status and conventions |
+| [docs/development.md](docs/development.md) | For developers: the project brief, modules, status and conventions |
 
-## How it is built
+## Limits
 
-Swift Package Manager, Swift Testing, no third-party dependencies. The modules keep the
-layers apart so the protocol work is reusable:
+- The protocol was captured from a Digi 002. The 002 Rack, 003 and 003 Rack share the
+  driver and very likely the protocol, but have not been tried.
+- The desk's audio side (sample rate, clock source, optical mode) is not touched; Audio
+  MIDI Setup still handles that.
+- The displays show 4 characters per strip, as the desk has; names are shortened or
+  scrolled to fit.
+- The app is not notarised, so the first launch needs the extra step described above.
 
-| Module | Role |
-|---|---|
-| `MIDIIO` | CoreMIDI client, ports, virtual port, desk detection |
-| `Digi00x` | The desk's protocol: faders, buttons, LEDs, rings, displays |
-| `MCU` | Mackie Control encoder and decoder |
-| `BridgeCore` | Translation between the two, with no I/O; holds the config |
-| `BridgeRuntime` | The running bridge: connections, host watching, desk wake and standby |
-| `bridge` | Command line version |
-| `BridgeApp` | The macOS app |
-| `capture` | Logging and probing tool used to decode the protocol |
-
-The protocol was captured from a Digi 002; it has not been tested on a 003. Nothing
-from Avid's driver or Pro Tools ships in this project, and Neyrinck's V-Control Pro was
-not studied.
+The code, the protocol write-up and the development notes are in this repository for
+anyone who wants to look further; see [docs/development.md](docs/development.md).
