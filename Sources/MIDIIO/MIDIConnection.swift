@@ -20,32 +20,59 @@ public final class MIDIConnection {
     private var inputPort = MIDIPortRef()
     private var outputPort = MIDIPortRef()
     private var receiver: Receiver?
+    private let onSetupChanged: (() -> Void)?
 
-    public init(name: String) throws {
-        try check("MIDIClientCreateWithBlock",
-                  MIDIClientCreateWithBlock(name as CFString, &client, nil))
-        try check("MIDIOutputPortCreate",
-                  MIDIOutputPortCreate(client, "\(name) out" as CFString, &outputPort))
-        try check("MIDIInputPortCreateWithBlock",
-                  MIDIInputPortCreateWithBlock(client, "\(name) in" as CFString, &inputPort) {
-                      [weak self] list, _ in self?.deliver(list)
-                  })
+    /// `onSetupChanged` is called, on a CoreMIDI thread, whenever a port appears or goes
+    /// anywhere on the Mac. The client is created on the MIDI thread (see `MIDIThread`)
+    /// so that this process keeps seeing such changes at all.
+    public init(name: String, onSetupChanged: (() -> Void)? = nil) throws {
+        self.onSetupChanged = onSetupChanged
+        try MIDIThread.shared.sync {
+            try self.check("MIDIClientCreateWithBlock",
+                           MIDIClientCreateWithBlock(name as CFString, &self.client) { [weak self] note in
+                               if note.pointee.messageID == .msgSetupChanged { self?.onSetupChanged?() }
+                           })
+            try self.check("MIDIOutputPortCreate",
+                           MIDIOutputPortCreate(self.client, "\(name) out" as CFString, &self.outputPort))
+            try self.check("MIDIInputPortCreateWithBlock",
+                           MIDIInputPortCreateWithBlock(self.client, "\(name) in" as CFString, &self.inputPort) {
+                               [weak self] list, _ in self?.deliver(list)
+                           })
+        }
     }
 
     deinit {
-        MIDIClientDispose(client)
+        close()
     }
+
+    /// Disconnects every source, disposes the ports and then the client, in that order, so
+    /// the driver sees the source released before the client goes. Safe to call twice.
+    public func close() {
+        guard client != 0 else { return }
+        for source in connectedSources { MIDIPortDisconnectSource(inputPort, source) }
+        connectedSources.removeAll()
+        MIDIPortDispose(inputPort)
+        MIDIPortDispose(outputPort)
+        MIDIClientDispose(client)
+        client = 0
+        inputPort = 0
+        outputPort = 0
+    }
+
+    private var connectedSources: [MIDIEndpointRef] = []
 
     /// Starts delivering packets from `source` to `receiver`. Only one receiver is kept.
     public func listen(to source: Endpoint, receiver: @escaping Receiver) throws {
         self.receiver = receiver
         try check("MIDIPortConnectSource", MIDIPortConnectSource(inputPort, source.ref, nil))
+        connectedSources.append(source.ref)
     }
 
     /// Stops listening to `source`. For the desk this is what "disconnecting" means: with no
     /// client on its control port it goes back to standby.
     public func stopListening(to source: Endpoint) throws {
         try check("MIDIPortDisconnectSource", MIDIPortDisconnectSource(inputPort, source.ref))
+        connectedSources.removeAll { $0 == source.ref }
     }
 
     /// Sends `bytes` as one packet, timestamped now. SysEx up to a few KB is fine.

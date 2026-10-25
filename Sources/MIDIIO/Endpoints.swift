@@ -34,7 +34,7 @@ public enum Endpoints {
     /// so it works whether the device shows up as "Avid 002" or "Avid 003".
     public static func controlPort(_ direction: Endpoint.Direction) -> Endpoint? {
         all(direction).first { ep in
-            ep.entityName == controlPortName && isAvidDevice(ep)
+            ep.entityName == controlPortName && isAvidDevice(ep) && !ep.isOffline
         }
     }
 
