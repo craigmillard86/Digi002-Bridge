@@ -21,6 +21,20 @@ public enum MCUMessage: Equatable {
     /// One character of the host's seven-segment displays: positions 0–9 are the timecode,
     /// right to left, and 10–11 the two assignment characters.
     case sevenSegment(position: Int, character: Character, dot: Bool)
+
+    // The connection handshake. A Mackie Control announces itself with a connection
+    // query; the host answers and the surface confirms, after which the host sends its
+    // whole state. Logic also polls with a device query, which the surface answers with
+    // the same connection query.
+    case deviceQuery
+    case connectionQuery(serial: [UInt8], challenge: [UInt8])
+    case hostConnectionReply(serial: [UInt8], response: [UInt8])
+    case connectionConfirmation(serial: [UInt8])
+    /// `13 00`: the host asks for the surface's firmware version; the surface answers with
+    /// `14` and five ASCII characters. Logic asks when it scans for surfaces at start-up
+    /// and sends nothing to a surface that does not answer.
+    case versionRequest
+    case versionReply(String)
 }
 
 /// How the host wants a V-Pot ring drawn (bits 4–5 of the ring byte).
@@ -91,6 +105,10 @@ public struct MCUNote: Hashable {
     public static let right = MCUNote(0x63)
     public static let zoom = MCUNote(0x64)
     public static let scrub = MCUNote(0x65)
+    /// The two "user" switches (foot switch inputs on a real Mackie Control). Logic
+    /// leaves them unassigned, so they can be given any command in Controller Assignments.
+    public static let userA = MCUNote(0x66)
+    public static let userB = MCUNote(0x67)
 }
 
 public enum MCUEncoder {
@@ -121,6 +139,20 @@ public enum MCUEncoder {
             let ascii = UInt8(character.asciiValue ?? 0x20)
             let code = ascii >= 0x40 ? ascii - 0x40 : ascii
             return [0xB0, 0x40 + UInt8(position), code & 0x3F | (dot ? 0x40 : 0)]
+        case .deviceQuery:
+            return MCUDecoder.header + [0x00, 0xF7]
+        case let .connectionQuery(serial, challenge):
+            return MCUDecoder.header + [0x01] + serial + challenge + [0xF7]
+        case let .hostConnectionReply(serial, response):
+            return MCUDecoder.header + [0x02] + serial + response + [0xF7]
+        case let .connectionConfirmation(serial):
+            return MCUDecoder.header + [0x03] + serial + [0xF7]
+        case .versionRequest:
+            return MCUDecoder.header + [0x13, 0x00, 0xF7]
+        case let .versionReply(version):
+            var text = Array(version.utf8.prefix(5)).map { $0 & 0x7F }
+            while text.count < 5 { text.append(0x20) }
+            return MCUDecoder.header + [0x14] + text + [0xF7]
         }
     }
 }
@@ -128,8 +160,10 @@ public enum MCUEncoder {
 /// Decodes what Logic sends to an MCU: fader positions, LED states, V-Pot rings and LCD
 /// text. Everything else (meters, timecode) is passed back as unhandled for now.
 public struct MCUDecoder {
-    /// Logic writes the LCD with `F0 00 00 66 14 12 offset text F7`; 14 is the MCU device id.
-    static let lcdHeader: [UInt8] = [0xF0, 0x00, 0x00, 0x66, 0x14, 0x12]
+    /// Every MCU SysEx starts with the Mackie id and the device id (14 = Mackie Control).
+    static let header: [UInt8] = [0xF0, 0x00, 0x00, 0x66, 0x14]
+    /// Logic writes the LCD with `F0 00 00 66 14 12 offset text F7`.
+    static let lcdHeader: [UInt8] = header + [0x12]
 
     private var runningStatus: UInt8 = 0
     private var pending: [UInt8] = []
@@ -204,8 +238,25 @@ public struct MCUDecoder {
     }
 
     private func sysexMessage(_ bytes: [UInt8]) -> MCUMessage? {
-        guard bytes.count >= Self.lcdHeader.count + 2, bytes.starts(with: Self.lcdHeader) else { return nil }
-        let offset = Int(bytes[Self.lcdHeader.count])
-        return .lcd(offset: offset, text: Array(bytes[(Self.lcdHeader.count + 1)..<(bytes.count - 1)]))
+        guard bytes.count >= Self.header.count + 2, bytes.starts(with: Self.header), bytes.last == 0xF7 else { return nil }
+        let body = Array(bytes[(Self.header.count + 1)..<(bytes.count - 1)])
+        switch bytes[Self.header.count] {
+        case 0x12 where !body.isEmpty:
+            return .lcd(offset: Int(body[0]), text: Array(body.dropFirst()))
+        case 0x00 where body.isEmpty:
+            return .deviceQuery
+        case 0x01 where body.count == 11:
+            return .connectionQuery(serial: Array(body[0..<7]), challenge: Array(body[7..<11]))
+        case 0x02 where body.count == 11:
+            return .hostConnectionReply(serial: Array(body[0..<7]), response: Array(body[7..<11]))
+        case 0x03 where body.count == 7:
+            return .connectionConfirmation(serial: body)
+        case 0x13:
+            return .versionRequest
+        case 0x14:
+            return .versionReply(String(body.map { Character(UnicodeScalar($0)) }))
+        default:
+            return nil
+        }
     }
 }

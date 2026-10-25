@@ -84,15 +84,20 @@ Logic, add a Mackie Control surface (Control Surfaces > Setup > New > Install) a
 both its ports to "003 MCU". The bridge connects to the desk only while Logic runs, so
 the desk sleeps in standby when Logic is closed. `tools/install.sh [--login]` installs
 the release build as `digi002-bridge`, with an optional launch agent. `docs/user-guide.md`
-explains every button from the user's side. Not yet done: the display character set, a
-config file.
+explains every button from the user's side. The config file is
+`~/Library/Application Support/002 Bridge/config.json` (`docs/config.md`): what A–E,
+Master Bypass and Master Faders do, name style, value display time, wake wait, start
+modes and the host application. Not yet done: the display character set.
 
 ## Phase 4: setup app
 
 "002 Bridge.app" wraps the same bridge in a small window like Audio MIDI Setup: the desk,
-Logic and bridge status, Start/Stop/Restart, Start at login (macOS 13+), setup help when
-Logic is running but silent, and a log. A menu bar item shows the state and offers
-Restart. The runtime lives in `BridgeRuntime` (`BridgeService`), shared with the command
+Logic and bridge status with times, a drawing of the desk as last sent, Start/Stop/
+Restart/Reconnect Desk, setup help when Logic is running but silent, and a log. A
+Settings window (⌘,) edits the config file and the app's own options: start at login
+(macOS 13+), menu bar only, debug log, notifications (desk lost, desk back, Logic
+ignoring the surface) and sounds. The menu bar item shows the state as a coloured dot
+and offers the quick actions. A second copy of the app hands over to the running one. The runtime lives in `BridgeRuntime` (`BridgeService`), shared with the command
 line `bridge`. Build it with `tools/make-app.sh [--install]`; `tools/make-release.sh`
 zips it with `docs/install.md` and the button guide for handing to someone else. It is
 signed ad hoc unless `SIGN_IDENTITY` names a Developer ID certificate, so the first launch

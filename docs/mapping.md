@@ -18,7 +18,7 @@ the desk button. LEDs Logic asks to flash are toggled by the bridge every 0.5 s.
 | hold Rec (by Meter) + SEL n | Record arm channel n | the small Record Ready LED above SEL |
 | Meter | toggles the rings between V-Pot positions and Logic's channel meters: a bar for the level, a dot that holds the peak for 1 s then falls, and the red 15th LED for 2 s after a clip (how Pro Tools used them) | shows meter mode |
 | Display 9 (left of the sample rate LEDs) | the V-Pot assignment Logic has lit: Pan, Send, Plug, EQ, Inst, Trk | — |
-| Display 10 | the left four characters of Logic's position display: the bar number in bars/beats, hours and minutes in SMPTE | — |
+| Display 10 | Logic's position: the bar number in bars/beats, the hours in SMPTE. The config's `timeDisplay` can make it bar.beat, or spread bar and beat.division over displays 9 and 10 (docs/config.md) | — |
 
 ## Navigation
 
@@ -59,7 +59,22 @@ the desk button. LEDs Logic asks to flash are toggled by the bridge every 0.5 s.
 | Rew, FFW, Stop, Play, Rec | Rewind, Fast Forward, Stop, Play, Record | — |
 | RTZ | Stop pressed twice: Logic returns to the project (or cycle) start | — |
 
-## Not mapped yet
+## Configurable buttons
 
-A–E, Master Bypass, Master Faders. MCU has no direct equivalent; these are
-candidates for the config file.
+These have no fixed Mackie Control meaning and take their function from the config
+file (docs/config.md). Defaults:
+
+| Desk | Logic (MCU) | LED |
+|---|---|---|
+| A | Marker (hold for marker mode; Shift+A creates a marker) | yes |
+| B | Click (metronome) | yes |
+| C | Save | yes |
+| D | Scrub | yes |
+| E | SMPTE/Beats (position display format) | yes |
+| Master Bypass | User switch A: assign any command in Logic's Controller Assignments | yes |
+| Master Faders | Global View | yes |
+
+Each can also have a second function for while Shift is held (`shiftButtons` in the
+config); by default Shift plus the button is Logic's Shift variant of its function.
+
+Standalone and the monitor section stay with the desk.

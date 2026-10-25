@@ -14,15 +14,18 @@ The bridge program must be running, and Logic must have a Mackie Control set up 
    `.build/debug/bridge` in the project folder. It finds the desk's control port and
    creates the "003 MCU" port.
 2. In Logic, once only: Control Surfaces > Setup > New > Install > Mackie Designs >
-   Mackie Control, then set its Output Port and Input Port to "003 MCU". Logic remembers
-   this.
+   Mackie Control, then set its Output Port and Input Port to "003 MCU". Then in
+   Logic Pro > Settings > MIDI > Inputs tick "003 MCU" and untick "Avid 002 Port 3
+   (Control)", or Logic shows names on the desk but ignores its buttons and faders.
+   Logic remembers this.
 3. Open Logic. The bridge connects to the desk only while Logic runs. About 5 seconds
    after Logic starts, the desk comes out of standby, the bridge clears every LED and
    display, then Logic sends its state and the faders, LEDs and displays catch up.
 
-When Logic quits, the bridge disconnects and the desk goes back to standby: the faders
-park at the bottom and the displays show "Digi 002 / Standby". Start Logic again and it
-wakes.
+When Logic quits, the bridge wipes the desk, disconnects, and the desk goes back to
+standby: the faders park at the bottom and the displays show "Digi 002 / Standby". Start
+Logic again and it wakes. The desk can be switched off and on at any time; the bridge
+notices it go and picks it up again when it is back.
 
 ## Channel strips
 
@@ -37,7 +40,7 @@ move the bank (see Navigation).
 | SOLO | Solo on/off. | LED on while soloed. |
 | MUTE | Mute on/off. | LED on while muted. |
 | Rec (the button beside Meter) + SEL | Hold Rec and press a strip's SEL to arm or disarm that track for recording. | The small red Record Ready LED above SEL is on while armed and flashes while Logic records. |
-| Display above the strip | The track name, cut to 4 characters the way Pro Tools did it: "Audio 1" is "Aud1", "Master" is "Mstr". While you turn an encoder, the value shows for 1.5 seconds ("L23", "C", "-10."), then the name returns. In views where Logic shows only one line, that line is shown. | 4 characters per strip. |
+| Display above the strip | The track name, cut to 4 characters the way Pro Tools did it: "Audio 1" is "Aud1", "Master" is "Mstr". Settings can instead make long names scroll across the display, once or all the time. While you turn an encoder, the value shows for 1.5 seconds ("L23", "C", "-10."), then the name returns. In views where Logic shows only one line, that line is shown. | 4 characters per strip. |
 
 The SEL LED is two-colour. Logic only uses green; red and orange are available for later
 features.
@@ -115,17 +118,56 @@ The two displays above the sample rate LEDs show Logic's state:
 | Display | Shows |
 |---|---|
 | 9 (left) | The current encoder assignment: Pan, Send, Plug, EQ, Inst or Trk. |
-| 10 (right) | The left four characters of Logic's position display: the bar number in bars/beats, or hours and minutes in SMPTE. |
+| 10 (right) | Logic's position: the bar number in bars/beats, or the hours in SMPTE. |
 
-## Not mapped yet, and what the LEDs mean
+Settings > Position offers two more layouts: bar and beat on display 10 as "12.3" (hours
+and minutes in SMPTE), or the bar on display 9 and the beat and division on display 10
+as "3.1" (minutes and seconds). In that last layout the assignment name appears on
+display 9 for a moment when it changes, then the bar comes back. The E button (SMPTE/
+Beats by default) switches Logic between the two formats.
 
-These buttons send nothing to Logic for now. Mackie Control has no direct equivalent, so
-each needs a chosen function (a config file is planned):
+## A to E, Master Bypass, Master Faders
 
-- A, B, C, D, E (left column)
-- Master Bypass
-- Master Faders
-- Standalone and the monitor section, which the bridge leaves to the desk on purpose
+Mackie Control has no fixed meaning for these seven, so each does whatever you choose in
+the app's Settings window (or the config file, see docs/config.md). Out of the box:
+
+| Desk button | Does in Logic | LED |
+|---|---|---|
+| A | Marker: hold it and the arrow pad and Rewind/Forward go from marker to marker; Shift+A creates a marker. | On in marker mode. |
+| B | Metronome on/off. | On while the click is on. |
+| C | Save the project. | — |
+| D | Scrub mode. | On in scrub mode. |
+| E | Switches display 10 between bars/beats and SMPTE. | Follows Logic. |
+| Master Bypass | User switch A: Logic leaves it free. Give it any command in Logic Pro > Control Surfaces > Controller Assignments (press Learn, then the button). | Follows Logic. |
+| Master Faders | Global View: shows all tracks; press again to step through the mixer views. | On in global view. |
+
+Any of them can instead be F1–F8, a transport button, a modifier, an encoder assignment,
+a cursor key or nothing. Each can also be given a second function for while Shift is
+held ("A with Shift" in Settings): for example A as Marker and Shift+A as Cycle. Without
+a second function, Shift plus the button is Logic's own Shift variant, so Shift+A still
+creates a marker. Standalone and the monitor section stay with the desk.
+
+## Settings
+
+002 Bridge > Settings… (⌘,) in the app. Changes apply at once; the desk is wiped and
+refilled so you see the result straight away.
+
+- General: start at login; menu bar only (no Dock icon); debug log. With the debug log
+  off the window hides its log pane and shrinks to the status and the desk.
+- Desk: how long to wait for the desk to wake after connecting; how long a changed value
+  shows before the name returns; values light-on-dark; track names Pro Tools style
+  ("Aud1") or just cut ("Audi"); long names scrolling; the position layout on displays
+  9 and 10; meters on the rings at start; nav pad nudging at start; record-armed tracks
+  lighting SEL red.
+- Buttons: the seven above, each with and without Shift.
+- Notifications: a macOS notification when the desk is lost, when it is back, and when
+  Logic runs but ignores the surface; a sound on connect and on loss.
+- Host application: which program the desk is connected for, if not Logic.
+
+The window also draws the desk as the bridge last sent it: faders, rings, names and LEDs.
+It works with no desk attached, so Logic's side can be checked on its own.
+
+## What the LEDs mean
 
 LED behaviour is the same everywhere: a lit button means Logic reports that function as
 active. A flashing LED is Logic asking for attention (the Record Ready LED flashes while
@@ -136,8 +178,10 @@ off every half second.
 
 The easiest way is the app: `tools/make-app.sh --install` builds "002 Bridge" into
 /Applications. Open it, press Start (it starts on its own), and tick "Start at login".
-Its window shows whether the desk and Logic are found, and the menu bar "002" item lets
-you restart the bridge. On first launch macOS may ask you to confirm, because the app is
+Its window shows whether the desk and Logic are found and since when, and draws the
+desk; the menu bar "002" item shows the state as a coloured dot (green connected, orange
+standby, red not found, grey stopped) and offers Reconnect Desk, Restart Bridge, Reset
+MIDI Server, opening Logic, the log and Settings. On first launch macOS may ask you to confirm, because the app is
 not notarised: right-click it and choose Open.
 
 For a background tool without a window, `tools/install.sh` builds the release version and copies it to

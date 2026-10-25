@@ -33,8 +33,30 @@ import Testing
 
 @Test func otherSysExAndUnknownCCsAreUnhandled() {
     var decoder = MCUDecoder()
-    #expect(decoder.decode([0xF0, 0x00, 0x00, 0x66, 0x14, 0x00, 0xF7]) == [])
+    #expect(decoder.decode([0xF0, 0x00, 0x00, 0x66, 0x14, 0x21, 0x01, 0xF7]) == [])   // LCD meter mode, unused
     #expect(decoder.decode([0xB0, 0x4C, 0x05]) == [])   // a CC Logic does not use
     // A status byte inside SysEx abandons it.
     #expect(decoder.decode([0xF0, 0x00, 0x00, 0x66, 0x90, 0x10, 0x00]) == [.note(.mute(0), on: false)])
+}
+
+@Test func handshakeMessagesRoundTrip() {
+    var decoder = MCUDecoder()
+    // bridge-run-10.log: Logic polls with the device query.
+    #expect(decoder.decode([0xF0, 0x00, 0x00, 0x66, 0x14, 0x00, 0xF7]) == [.deviceQuery])
+    let serial: [UInt8] = Array("002BRGE".utf8)
+    for message in [MCUMessage.connectionQuery(serial: serial, challenge: [1, 2, 3, 4]),
+                    .hostConnectionReply(serial: serial, response: [5, 6, 7, 8]),
+                    .connectionConfirmation(serial: serial)] {
+        #expect(decoder.decode(MCUEncoder.encode(message)) == [message])
+    }
+    #expect(MCUEncoder.encode(.connectionQuery(serial: serial, challenge: [1, 2, 3, 4])).count == 18)
+}
+
+@Test func versionRequestIsAnsweredWithFiveCharacters() {
+    var decoder = MCUDecoder()
+    // 002 Bridge.log, 25 Oct: Logic's start-up scan asks each port for its version.
+    #expect(decoder.decode([0xF0, 0x00, 0x00, 0x66, 0x14, 0x13, 0x00, 0xF7]) == [.versionRequest])
+    #expect(MCUEncoder.encode(.versionReply("V1.00")) == [0xF0, 0x00, 0x00, 0x66, 0x14, 0x14, 0x56, 0x31, 0x2E, 0x30, 0x30, 0xF7])
+    #expect(MCUEncoder.encode(.versionReply("V1")) == [0xF0, 0x00, 0x00, 0x66, 0x14, 0x14, 0x56, 0x31, 0x20, 0x20, 0x20, 0xF7])
+    #expect(decoder.decode(MCUEncoder.encode(.versionReply("V1.00"))) == [.versionReply("V1.00")])
 }

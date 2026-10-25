@@ -1,3 +1,4 @@
+import Foundation
 import Digi00x
 import MCU
 
@@ -5,8 +6,12 @@ import MCU
 /// feeds it decoded messages and sends whatever it returns. docs/mapping.md describes
 /// what each button does.
 public struct Bridge {
-    /// Desk buttons that map one-to-one onto MCU buttons, both for presses and for LEDs.
-    public static let buttonMap: [Button: MCUNote] = {
+    public let config: BridgeConfig
+
+    /// Desk buttons with a fixed one-to-one MCU meaning, both for presses and for LEDs.
+    /// The configurable ones (A–E, Master Bypass, Master Faders) are added per instance
+    /// from the config; see `buttonMap`.
+    public static let fixedButtonMap: [Button: MCUNote] = {
         var map: [Button: MCUNote] = [:]
         for channel in 0..<8 {
             map[.select(channel)] = .select(channel)
@@ -35,20 +40,55 @@ public struct Bridge {
         return map
     }()
 
+    /// The fixed map plus the configured buttons.
+    public let buttonMap: [Button: MCUNote]
+    /// What the configured buttons send instead while the desk's Shift is held.
+    public let shiftButtonMap: [Button: MCUNote]
+
     /// Several desk buttons can share one MCU note (e.g. both Insert buttons); every one
     /// of them shows that note's LED.
-    private static let buttonsForNote: [MCUNote: [Button]] = {
-        var lookup = Dictionary(grouping: buttonMap.keys, by: { buttonMap[$0]! })
-        // Record arm has no button of its own; it lights the Record Ready LED above SEL.
-        for channel in 0..<8 { lookup[.recArm(channel), default: []].append(.recordReady(channel)) }
+    private let buttonsForNote: [MCUNote: [Button]]
+
+    static func makeButtonMap(_ config: BridgeConfig) -> [Button: MCUNote] {
+        var map = fixedButtonMap
+        for name in BridgeConfig.configurableButtons {
+            guard let button = Button.named(name) else { preconditionFailure("no button named \(name)") }
+            if let note = config.action(for: name).note { map[button] = note }
+        }
+        return map
+    }
+
+    static func makeShiftButtonMap(_ config: BridgeConfig) -> [Button: MCUNote] {
+        var map: [Button: MCUNote] = [:]
+        for name in BridgeConfig.configurableButtons {
+            guard let button = Button.named(name) else { preconditionFailure("no button named \(name)") }
+            if let note = config.shiftAction(for: name).note { map[button] = note }
+        }
+        return map
+    }
+
+    static func makeButtonsForNote(_ map: [Button: MCUNote], _ shiftMap: [Button: MCUNote],
+                                   _ config: BridgeConfig) -> [MCUNote: [Button]] {
+        var lookup = Dictionary(grouping: map.keys, by: { map[$0]! })
+        // A button that only does something with Shift shows that function's LED.
+        for (button, note) in shiftMap where map[button] == nil {
+            lookup[note, default: []].append(button)
+        }
+        // Record arm has no button of its own; it lights the Record Ready LED above SEL,
+        // and the red half of the SEL LED too if asked.
+        for channel in 0..<8 {
+            lookup[.recArm(channel), default: []].append(.recordReady(channel))
+            if config.armedSelectRed { lookup[.recArm(channel), default: []].append(.selectRed(channel)) }
+        }
         return lookup
-    }()
+    }
 
     static let bankButton = Button.named("Bank")!
     static let nudgeButton = Button.named("Nudge")!
     static let leftButton = Button.named("Left")!
     static let rightButton = Button.named("Right")!
     static let recButton = Button.named("Rec (meter)")!
+    static let shiftButton = Button.named("Shift")!
     static let meterButton = Button.named("Meter")!
     static let rtzButton = Button.named("RTZ")!
 
@@ -66,6 +106,8 @@ public struct Bridge {
     static let peakHoldTicks = 10     // 1 s before a meter's peak dot starts to fall
     static let clipHoldTicks = 20     // 2 s of red after a clip, unless Logic clears it first
     static let flashHalfPeriodTicks = 5   // flashing LEDs change state every 0.5 s
+    static let scrollHoldTicks = 10       // a scrolling name rests 1 s at each end
+    static let scrollStepTicks = 3        // and moves one character every 0.3 s
 
     /// What the nav pad's left and right arrows do.
     public enum NavMode: Equatable {
@@ -73,9 +115,11 @@ public struct Bridge {
         case channel   // move it by 1 track
     }
 
-    public private(set) var navMode = NavMode.bank
+    public private(set) var navMode: NavMode
     private var logicZoomOn = false
     private var recHeld = false
+    /// The desk's Shift is held (or any button configured as Shift).
+    private var shiftHeld = false
     /// The MCU note sent for each held desk button, so the release goes to the same
     /// note even if a mode changed in between.
     private var heldNotes: [Button: MCUNote] = [:]
@@ -91,7 +135,7 @@ public struct Bridge {
     /// What each desk ring currently shows (V-Pot or meter), so unchanged rings are not resent.
     private var ringShown: [Int: Ring] = [:]
     /// Rings show Logic's meters instead of the V-Pots, as Pro Tools did; the Meter button toggles it.
-    public private(set) var meterMode = false
+    public private(set) var meterMode: Bool
     private var meterLevel = [Int](repeating: 0, count: 8)
     private var meterPeak = [Int](repeating: 0, count: 8)
     private var meterPeakAge = [Int](repeating: 0, count: 8)
@@ -108,9 +152,32 @@ public struct Bridge {
     /// What each desk display currently shows, so unchanged text is not resent.
     private var displayShown: [Int: SurfaceCommand] = [:]
     /// Bumped whenever a strip's display changes; a revert only applies if it still matches.
-    private var displayToken = [Int](repeating: 0, count: 8)
+    private var displayToken = [Int](repeating: 0, count: 10)
+    /// In the wide time display, the assignment name is on display 9 until its revert.
+    private var assignmentShowing = false
 
-    public init() {}
+    /// A name too long for its display, moving across it.
+    private struct Scroll {
+        var text: [Character]
+        var offset = 0
+        var wait = Bridge.scrollHoldTicks
+        var finished = false
+        /// A value is on the display; the name waits for the revert.
+        var paused = false
+
+        var window: String { String(text[offset..<(offset + 4)]) }
+        var atEnd: Bool { offset + 4 >= text.count }
+    }
+    private var scrolls: [Int: Scroll] = [:]
+
+    public init(config: BridgeConfig = .default) {
+        self.config = config
+        buttonMap = Self.makeButtonMap(config)
+        shiftButtonMap = Self.makeShiftButtonMap(config)
+        buttonsForNote = Self.makeButtonsForNote(buttonMap, shiftButtonMap, config)
+        navMode = config.nudgeModeAtStart ? .channel : .bank
+        meterMode = config.meterModeAtStart
+    }
 
     /// A strip showing a value that should go back to its name after a short time. The
     /// caller waits, then passes it to `revertDisplay`.
@@ -173,7 +240,31 @@ public struct Bridge {
                 out.toSurface.append(.led(button, on: flashOn))
             }
         }
+        for strip in scrolls.keys.sorted() { advanceScroll(strip, into: &out) }
         return out.toSurface
+    }
+
+    private mutating func advanceScroll(_ strip: Int, into out: inout Output) {
+        guard var scroll = scrolls[strip], !scroll.paused, !scroll.finished else { return }
+        scroll.wait -= 1
+        guard scroll.wait <= 0 else { scrolls[strip] = scroll; return }
+        if scroll.atEnd {
+            switch config.nameScroll {
+            case .always:
+                scroll.offset = 0
+                scroll.wait = Self.scrollHoldTicks
+            default:
+                scroll.finished = true
+                scrolls[strip] = scroll
+                show(strip, text: lcdText(strip: strip, line: 0), inverse: false, into: &out)
+                return
+            }
+        } else {
+            scroll.offset += 1
+            scroll.wait = scroll.atEnd ? Self.scrollHoldTicks : Self.scrollStepTicks
+        }
+        scrolls[strip] = scroll
+        show(strip, text: scroll.window, inverse: false, into: &out)
     }
 
     public mutating func fromSurface(_ event: SurfaceEvent) -> Output {
@@ -222,12 +313,21 @@ public struct Bridge {
             default:
                 break
             }
+            if shiftHeld, let alternate = shiftButtonMap[button] {
+                // The alternate is its own function, not Shift plus the usual one, so Logic
+                // sees it without Shift. Shift is put back for whatever is pressed next.
+                heldNotes[button] = alternate
+                out.toLogic += [.note(.shift, on: false), .note(alternate, on: true), .note(.shift, on: true)]
+                return
+            }
             guard let note = note(for: button) else { return }
+            if note == .shift { shiftHeld = true }
             heldNotes[button] = note
             out.toLogic.append(.note(note, on: true))
         } else {
             if button == Self.recButton { recHeld = false }
             if let note = heldNotes.removeValue(forKey: button) {
+                if note == .shift { shiftHeld = false }
                 out.toLogic.append(.note(note, on: false))
             }
         }
@@ -246,7 +346,7 @@ public struct Bridge {
             case .channel: return left ? .channelLeft : .channelRight
             }
         }
-        return Self.buttonMap[button]
+        return buttonMap[button]
     }
 
     private func navModeLEDs() -> [SurfaceCommand] {
@@ -266,16 +366,22 @@ public struct Bridge {
             }
         case let .note(note, on):
             if note == .zoom { logicZoomOn = on }
-            for button in Self.buttonsForNote[note] ?? [] where Button.ledButtons.contains(button) {
+            for button in buttonsForNote[note] ?? [] where Button.ledButtons.contains(button) {
                 ledState[button] = on
                 flashing.remove(button)
                 out.toSurface.append(.led(button, on: on))
             }
             if on, let name = Self.assignmentNames[note] {
                 show(Self.assignmentStrip, text: name, inverse: false, into: &out)
+                if config.timeDisplay == .wide {
+                    // Display 9 belongs to the time; the assignment shows for a moment.
+                    assignmentShowing = true
+                    displayToken[Self.assignmentStrip] += 1
+                    out.displayReverts.append(DisplayRevert(strip: Self.assignmentStrip, token: displayToken[Self.assignmentStrip]))
+                }
             }
         case let .ledFlash(note):
-            for button in Self.buttonsForNote[note] ?? [] where Button.ledButtons.contains(button) {
+            for button in buttonsForNote[note] ?? [] where Button.ledButtons.contains(button) {
                 ledState[button] = true
                 flashing.insert(button)
                 out.toSurface.append(.led(button, on: flashOn))
@@ -302,15 +408,12 @@ public struct Bridge {
         case let .sevenSegment(position, character, _):
             guard position < sevenSegment.count else { break }
             sevenSegment[position] = character
-            if position < 10 {
-                // The leftmost four characters: the bar number in bars/beats, hours and
-                // minutes in SMPTE.
-                show(Self.positionStrip, text: String(sevenSegment[6...9].reversed()), inverse: false, into: &out)
-            }
+            if position < 10 { showTime(into: &out) }
         case let .lcd(offset, text):
             updateLCD(offset: offset, text: text, into: &out)
-        case .faderTouch, .vpot:
-            break
+        case .faderTouch, .vpot, .deviceQuery, .connectionQuery, .hostConnectionReply, .connectionConfirmation,
+             .versionRequest, .versionReply:
+            break    // the handshake is handled by the service
         }
         return out
     }
@@ -365,8 +468,36 @@ public struct Bridge {
 
     // MARK: Displays
 
-    /// Whether a changed value is shown light-on-dark. Off: plain text reads better on the desk.
-    static let valuesInverse = false
+    /// Logic's position as its four fields, left to right: bars, beats, subdivision and
+    /// ticks, or hours, minutes, seconds and frames. Both are 3, 2, 2 and 3 characters.
+    private func timeFields() -> [String] {
+        let chars = Array(sevenSegment[0..<10].reversed())
+        return [chars[0..<3], chars[3..<5], chars[5..<7], chars[7..<10]].map {
+            String($0).trimmingCharacters(in: .whitespaces)
+        }
+    }
+
+    /// "a.b" right-aligned in 4 characters, or "ab" when the dot would not fit.
+    static func timePair(_ a: String, _ b: String) -> String {
+        if a.isEmpty && b.isEmpty { return "" }
+        let joined = b.isEmpty ? a : a.count + b.count < 4 ? a + "." + b : a + b
+        return String(repeating: " ", count: max(0, 4 - joined.count)) + joined.suffix(4)
+    }
+
+    private mutating func showTime(into out: inout Output) {
+        let f = timeFields()
+        switch config.timeDisplay {
+        case .bars:
+            show(Self.positionStrip, text: Self.timePair(f[0], ""), inverse: false, into: &out)
+        case .barsBeats:
+            show(Self.positionStrip, text: Self.timePair(f[0], f[1]), inverse: false, into: &out)
+        case .wide:
+            if !assignmentShowing {
+                show(Self.assignmentStrip, text: Self.timePair(f[0], ""), inverse: false, into: &out)
+            }
+            show(Self.positionStrip, text: Self.timePair(f[1], f[2]), inverse: false, into: &out)
+        }
+    }
 
     /// Strips whose text changed get the track name (top line); a strip whose value
     /// (bottom line) changed on its own shows the value until the caller reverts it.
@@ -385,12 +516,22 @@ public struct Bridge {
             let value = lcdText(strip: strip, line: 1)
             if name.isEmpty {
                 // Some Logic views only use the bottom line; then it is the text to show.
+                scrolls[strip] = nil
                 show(strip, text: value, inverse: false, into: &out)
             } else if valueChanged.contains(strip), !nameChanged.contains(strip), !value.isEmpty {
-                show(strip, text: value, inverse: Self.valuesInverse, into: &out)
+                scrolls[strip]?.paused = true
+                show(strip, text: value, inverse: config.valuesInverse, into: &out)
                 out.displayReverts.append(DisplayRevert(strip: strip, token: displayToken[strip]))
             } else {
-                show(strip, text: name, inverse: false, into: &out)
+                let full = fullName(strip: strip)
+                if config.nameScroll != .off, full.count > 4 {
+                    let scroll = Scroll(text: Array(full))
+                    scrolls[strip] = scroll
+                    show(strip, text: scroll.window, inverse: false, into: &out)
+                } else {
+                    scrolls[strip] = nil
+                    show(strip, text: name, inverse: false, into: &out)
+                }
             }
         }
     }
@@ -400,18 +541,41 @@ public struct Bridge {
     public mutating func revertDisplay(_ revert: DisplayRevert) -> [SurfaceCommand] {
         guard revert.token == displayToken[revert.strip] else { return [] }
         var out = Output()
+        if revert.strip == Self.assignmentStrip {
+            assignmentShowing = false
+            showTime(into: &out)
+            return out.toSurface
+        }
         let name = lcdText(strip: revert.strip, line: 0)
+        if var scroll = scrolls[revert.strip], !name.isEmpty {
+            scroll.paused = false
+            scrolls[revert.strip] = scroll
+            show(revert.strip, text: scroll.finished ? name : scroll.window, inverse: false, into: &out)
+            return out.toSurface
+        }
         show(revert.strip, text: name.isEmpty ? lcdText(strip: revert.strip, line: 1) : name, inverse: false, into: &out)
         return out.toSurface
     }
 
+    /// The strip's whole top line with the padding removed, for scrolling.
+    private func fullName(strip: Int) -> String {
+        let start = strip * 7
+        return String(lcd[start..<(start + 7)].map { Character(UnicodeScalar($0)) })
+            .trimmingCharacters(in: .whitespaces)
+    }
+
     /// The strip's 7 LCD characters squeezed into the desk's 4. Names are abbreviated the
-    /// way Pro Tools did it; values (line 1) only lose their spaces, so "-10.5" is not
-    /// turned into "-105".
+    /// way Pro Tools did it, or just cut, per the config; values (line 1) only lose their
+    /// spaces, so "-10.5" is not turned into "-105".
     private func lcdText(strip: Int, line: Int) -> String {
         let start = line * 56 + strip * 7
         let text = String(lcd[start..<(start + 7)].map { Character(UnicodeScalar($0)) })
-        if line == 0 { return Self.abbreviate(text, to: 4) }
+        if line == 0 {
+            switch config.nameStyle {
+            case .proTools: return Self.abbreviate(text, to: 4)
+            case .plain: return String(String(text.prefix(4)).reversed().drop { $0 == " " }.reversed())
+            }
+        }
         return String(text.filter { $0 != " " }.prefix(4))
     }
 
@@ -446,7 +610,7 @@ public struct Bridge {
 extension Button {
     /// Buttons with a physical LED (docs/protocol.md, LEDs). Sending LED messages to the
     /// others is harmless but pointless.
-    static let ledButtons: Set<Button> = {
+    public static let ledButtons: Set<Button> = {
         let noLED: Set<String> = ["Shift", "Option", "Control", "Command", "Left", "Right", "Up", "Down",
                                   "F1", "F2", "F3", "F4", "F5", "RTZ", "Rewind", "Fast Forward",
                                   "Stop", "Play", "Record"]

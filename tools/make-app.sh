@@ -9,6 +9,9 @@ app="build/002 Bridge.app"
 rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp .build/release/BridgeApp "$app/Contents/MacOS/002 Bridge"
+swift tools/make-icon.swift build/AppIcon.icns
+cp build/AppIcon.icns "$app/Contents/Resources/AppIcon.icns"
+cp docs/user-guide.md docs/install.md docs/config.md "$app/Contents/Resources/"
 cat > "$app/Contents/Info.plist" <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -22,6 +25,8 @@ cat > "$app/Contents/Info.plist" <<'EOF'
     <string>002 Bridge</string>
     <key>CFBundleDisplayName</key>
     <string>002 Bridge</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>

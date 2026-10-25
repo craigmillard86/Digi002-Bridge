@@ -27,6 +27,6 @@ import Testing
 @Test func ignoresMasterFaderAndSysEx() {
     var decoder = MCUDecoder()
     #expect(decoder.decode([0xE8, 0x00, 0x40]) == [])
-    #expect(decoder.decode([0xF0, 0x00, 0x00, 0x66, 0x14, 0x00, 0xF7]) == [])   // device query, not LCD text
+    #expect(decoder.decode([0xF0, 0x00, 0x00, 0x66, 0x14, 0x21, 0x01, 0xF7]) == [])   // LCD meter mode, not handled
     #expect(decoder.decode([0xE0, 0x7F, 0x7F]) == [.fader(channel: 0, value: 0x3FFF)])
 }

@@ -69,10 +69,10 @@ private let meter = Button.named("Meter")!
     _ = bridge.fromLogic(.sevenSegment(position: 9, character: " ", dot: false))
     _ = bridge.fromLogic(.sevenSegment(position: 8, character: " ", dot: false))
     let out = bridge.fromLogic(.sevenSegment(position: 7, character: "5", dot: false))
-    #expect(out.toSurface == [.display(strip: 9, text: "  5 ", inverse: false)])
+    #expect(out.toSurface == [.display(strip: 9, text: "   5", inverse: false)])
     // An unchanged character sends nothing.
     #expect(bridge.fromLogic(.sevenSegment(position: 6, character: " ", dot: true)).toSurface == [])
-    #expect(bridge.startup().contains(.display(strip: 9, text: "  5 ", inverse: false)))
+    #expect(bridge.startup().contains(.display(strip: 9, text: "   5", inverse: false)))
     #expect(bridge.startup().contains(.led(meter, on: false)))
 }
 
