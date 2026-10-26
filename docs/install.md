@@ -64,14 +64,36 @@ encoder rings; hold Rec (next to Meter) and press SEL to arm a track.
   start the bridge.
 - Logic has to see the "003 MCU" port appear; if it was open before the bridge started,
   it can take a few seconds to re-send its state.
-- The desk ignores everything after being switched off and on while the Mac was running,
-  or the app freezes on start: the Mac's MIDI server has wedged inside Avid's driver, or
-  the FireWire connection has not recovered. In order, until it works: Bridge > Reset
-  MIDI Server; if FireWire comes through a Thunderbolt adapter, unplug the adapter from
-  the Mac (not just the FireWire cable), wait 10 seconds and plug it back in; otherwise,
-  or if that fails, restart the Mac with the desk on. Logic may need to be reopened
-  afterwards, because it loses its MIDI ports when the MIDI server restarts. Safest
-  habit: switch the desk on before the Mac, and leave it on.
+- "Logic Pro: NOT answering the bridge": the bridge announced the desk to Logic and
+  nothing came back, which a working Logic does within a fraction of a second. Open a
+  project, and check the Mackie Control's ports and the MIDI Inputs tick as above. If the
+  message instead says "quit it and open it again", the MIDI server restarted while Logic
+  was open and took Logic's ports with it; reopening Logic is the only fix.
+- "Desk: stopped following ... connecting again", or faders spring back to where they
+  were after you let go of them while buttons still reach Logic: the desk has stopped
+  taking commands but is otherwise fine. The bridge notices (two snap-backs within a
+  minute) and reconnects the desk by itself, which clears it; the desk refills about 15
+  seconds later. Reconnect Desk in the menu bar does the same by hand, and Settings has
+  the switch for doing it automatically. If it keeps happening the bridge says to power
+  cycle the desk. The cause is not known yet; it has been seen only after the bridge was
+  started while the desk was already awake and its audio engine already running.
+- "Desk: NOT taking commands", or buttons and faders from the desk reach Logic while
+  the faders, LEDs, names and time on the desk stop following it: the desk has gone deaf.
+  It happens when a program takes the desk within a few seconds of it being released,
+  while it is still going to standby (the bridge now waits 10 seconds before any
+  reconnect for this reason), and also when nothing is running the desk's audio engine,
+  which Avid's driver needs to carry MIDI to the desk (the bridge keeps it running;
+  Settings > "Keep the desk's audio engine running"). Once deaf, only a power cycle
+  clears it: switch the desk off, wait for "Desk: not found", switch it on. The bridge
+  then reconnects and refills it. The bridge stops sending to a deaf desk as soon as it
+  notices, because switching the desk off while the driver's buffer to it is full crashes
+  the Mac's MIDI server. If that happens anyway, every MIDI port disappears for a moment;
+  the bridge restarts itself, and Logic needs to be reopened because it loses its ports:
+  the app then shows "Logic Pro: NOT answering: quit it and open it again" and sends a
+  notification.
+  If none of that helps: Bridge > Reset MIDI Server and reopen Logic; if FireWire comes
+  through a Thunderbolt adapter, unplug the adapter from the Mac, wait 10 seconds and plug
+  it back in; restart the Mac with the desk on.
 - Switching the desk off and on while the bridge runs is fine: the app shows "Desk: not
   found" while it is off, picks it up again a few seconds after it is on, and either wipes
   it (Logic closed) or fills it in (Logic open). If instead the desk ignores everything

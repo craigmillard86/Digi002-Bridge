@@ -44,6 +44,7 @@ private func shown(_ strip: Int, _ text: String) -> SurfaceCommand { .display(st
     config.shiftButtons["A"] = .click
     config.timeDisplay = .wide
     config.nameScroll = .once
+    config.holdAudioEngine = false
     let data = try config.json()
     #expect(try BridgeConfig.from(json: data) == config)
     #expect(String(decoding: data, as: UTF8.self).contains("\"shiftButtons\""))
@@ -52,6 +53,7 @@ private func shown(_ strip: Int, _ text: String) -> SurfaceCommand { .display(st
     #expect(old.shiftButtons.isEmpty)
     #expect(old.timeDisplay == .bars)
     #expect(old.nameScroll == .off)
+    #expect(old.holdAudioEngine)
 }
 
 @Test func positionDisplayStyles() {

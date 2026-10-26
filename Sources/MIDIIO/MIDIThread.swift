@@ -10,6 +10,12 @@ import Foundation
 /// the list from the moment the client was made. Measured on macOS 14 with a virtual
 /// source toggled from another process. So clients are made here, on a thread that does
 /// nothing but run its loop, and the rest of the program can live on any queue.
+///
+/// The same goes for the very first CoreMIDI call of any kind: CoreMIDI sets up the
+/// process's connection to the server, and the port list that goes with it, on the thread
+/// that makes it. So the thread primes CoreMIDI before anything else can, and the port
+/// listings in `Endpoints` run here too (seen in the app: a listing made on a dispatch
+/// queue before any client existed left the app blind to the desk being switched on).
 final class MIDIThread {
     static let shared = MIDIThread()
 
@@ -24,6 +30,8 @@ final class MIDIThread {
             box.value = CFRunLoopGetCurrent()
             // A port keeps the loop alive with nothing else scheduled on it.
             RunLoop.current.add(Port(), forMode: .default)
+            // The first CoreMIDI call in the process, so its setup belongs to this thread.
+            _ = MIDIGetNumberOfDevices()
             ready.signal()
             while true { RunLoop.current.run(mode: .default, before: .distantFuture) }
         }

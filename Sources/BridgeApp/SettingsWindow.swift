@@ -28,6 +28,8 @@ final class SettingsWindowController: NSWindowController {
     private let meterBox = NSButton(checkboxWithTitle: "Rings show meters until Meter is pressed", target: nil, action: nil)
     private let nudgeBox = NSButton(checkboxWithTitle: "Nav pad moves by one track until Bank is pressed", target: nil, action: nil)
     private let armedBox = NSButton(checkboxWithTitle: "Record-armed tracks light SEL red as well", target: nil, action: nil)
+    private let audioBox = NSButton(checkboxWithTitle: "Keep the desk's audio engine running while connected (Avid's driver only delivers to the desk while it runs)", target: nil, action: nil)
+    private let stuckBox = NSButton(checkboxWithTitle: "Reconnect the desk by itself when it stops following (its faders spring back after they are released)", target: nil, action: nil)
     private var buttonPopups: [String: NSPopUpButton] = [:]
     private var shiftPopups: [String: NSPopUpButton] = [:]
     private let notifyLostBox = NSButton(checkboxWithTitle: "Desk switched off or lost", target: nil, action: nil)
@@ -88,7 +90,7 @@ final class SettingsWindowController: NSWindowController {
     }
 
     private func build() {
-        for box in [loginBox, dockBox, debugBox, inverseBox, meterBox, nudgeBox, armedBox,
+        for box in [loginBox, dockBox, debugBox, inverseBox, meterBox, nudgeBox, armedBox, audioBox, stuckBox,
                     notifyLostBox, notifyBackBox, notifySilentBox] {
             box.target = self
             box.action = #selector(changed(_:))
@@ -165,7 +167,7 @@ final class SettingsWindowController: NSWindowController {
             numberRow("Wake wait:", wakeField, wakeStepper, min: 1, max: 30, step: 0.5, unit: "seconds after connecting"),
             numberRow("Value display:", valueField, valueStepper, min: 0.2, max: 10, step: 0.1, unit: "seconds before the name returns"),
             row("Track names:", namePopup), row("Long names:", scrollPopup), row("Position:", timePopup),
-            inverseBox, meterBox, nudgeBox, armedBox,
+            inverseBox, meterBox, nudgeBox, armedBox, audioBox, stuckBox,
             heading("Buttons"),
         ] + buttonRows + [
             heading("Notifications"), notifyLostBox, notifyBackBox, notifySilentBox,
@@ -218,6 +220,8 @@ final class SettingsWindowController: NSWindowController {
         meterBox.state = config.meterModeAtStart ? .on : .off
         nudgeBox.state = config.nudgeModeAtStart ? .on : .off
         armedBox.state = config.armedSelectRed ? .on : .off
+        audioBox.state = config.holdAudioEngine ? .on : .off
+        stuckBox.state = config.reconnectWhenStuck ? .on : .off
         for (name, popup) in buttonPopups {
             let action = config.action(for: name)
             popup.selectItem(at: ButtonAction.allCases.firstIndex(of: action) ?? 0)
@@ -273,6 +277,8 @@ final class SettingsWindowController: NSWindowController {
         new.meterModeAtStart = meterBox.state == .on
         new.nudgeModeAtStart = nudgeBox.state == .on
         new.armedSelectRed = armedBox.state == .on
+        new.holdAudioEngine = audioBox.state == .on
+        new.reconnectWhenStuck = stuckBox.state == .on
         for (name, popup) in buttonPopups {
             if let raw = popup.selectedItem?.representedObject as? String, let action = ButtonAction(rawValue: raw) {
                 new.buttons[name] = action

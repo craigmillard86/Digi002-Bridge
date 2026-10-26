@@ -101,6 +101,12 @@ reports setup changes to a client made on a thread with a running run loop, so `
 has a dedicated MIDI thread (`MIDIThread`) and `BridgeService` re-finds the control port
 on every poll. See docs/protocol.md, power cycle rows, for what the driver does.
 
+Status (2026-10-26): the "half alive" desk (buttons reach Logic, nothing comes back) is
+Avid's driver stalling because MIDI to the desk rides on the audio stream and nothing was
+running the desk's audio engine. `BridgeRuntime/DeskAudio.swift` runs a silent Core
+Audio stream on the desk while connected, as Pro Tools does (`holdAudioEngine`, on by
+default).
+
 ## Phase 4: setup app
 
 "002 Bridge.app" wraps the same bridge in a small window like Audio MIDI Setup: the desk,

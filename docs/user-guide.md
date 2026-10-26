@@ -161,7 +161,8 @@ refilled so you see the result straight away.
   shows before the name returns; values light-on-dark; track names Pro Tools style
   ("Aud1") or just cut ("Audi"); long names scrolling; the position layout on displays
   9 and 10; meters on the rings at start; nav pad nudging at start; record-armed tracks
-  lighting SEL red.
+  lighting SEL red; keeping the desk's audio engine running while connected, which
+  Avid's driver needs in order to deliver anything to the desk (leave it on).
 - Buttons: the seven above, each with and without Shift.
 - Notifications: a macOS notification when the desk is lost, when it is back, and when
   Logic runs but ignores the surface; a sound on connect and on loss.
@@ -184,7 +185,9 @@ The easiest way is the app: `tools/make-app.sh --install` builds "002 Bridge" in
 Its window shows whether the desk and Logic are found and since when, and draws the
 desk; the menu bar "002" item shows the state as a coloured dot (green connected, orange
 standby, red not found, grey stopped) and offers Reconnect Desk, Restart Bridge, Reset
-MIDI Server, opening Logic, the log and Settings. On first launch macOS may ask you to confirm, because the app is
+MIDI Server, opening Logic, the log and Settings. Reconnect Desk drops the desk and takes
+it again, which is the cure when it stops following Logic (faders spring back after you
+let go); the bridge notices that itself and does it for you unless Settings says not to. On first launch macOS may ask you to confirm, because the app is
 not notarised: right-click it and choose Open.
 
 For a background tool without a window, `tools/install.sh` builds the release version and copies it to

@@ -63,7 +63,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             DispatchQueue.main.async { self?.show(status) }
         }
         service.onLog = { [weak self] line in
-            DispatchQueue.main.async { self?.appendLog(line) }
+            // The file is written here, on the service's queue, so the last lines of a
+            // quit (the desk being wiped and released) are in it; the window follows.
+            self?.writeLog(line)
+            DispatchQueue.main.async { self?.appendLog(line, toFile: false) }
         }
         service.onSurface = { [weak self] commands in
             DispatchQueue.main.async { self?.deskView.apply(commands) }
@@ -190,7 +193,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         work.async { [weak self] in
             guard let self else { return }
             do { try self.service.start() } catch {
-                DispatchQueue.main.async { self.appendLog("start failed: \(error.localizedDescription)") }
+                DispatchQueue.main.async { self.appendLog("start failed: \(error)") }
             }
         }
     }
@@ -284,8 +287,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         switch status.desk {
         case .notFound: desk = "not found" + Self.since(status.deskChangedAt) + ". Is the desk on, and is the Avid 003 Family driver installed?"
         case .standby: desk = "\(status.deskName): in standby" + Self.since(status.deskChangedAt)
+        case .settling where status.stuckAt != nil:
+            desk = "\(status.deskName): stopped following at \(BridgeService.clock(status.stuckAt!)), connecting again in a moment"
+        case .waking where status.stuckAt != nil:
+            desk = "\(status.deskName): stopped following at \(BridgeService.clock(status.stuckAt!)), waking up again"
+        case .settling: desk = "\(status.deskName): found, connecting in a moment"
         case .waking: desk = "\(status.deskName): waking up"
         case .connected: desk = "\(status.deskName): connected" + Self.since(status.deskChangedAt)
+        case .deaf: desk = "\(status.deskName): NOT taking commands. Switch the desk off, wait for \"not found\", switch it on"
+        case .notFollowing: desk = "\(status.deskName): NOT following \(status.hostName)" + Self.since(status.deskChangedAt)
+            + ". Use Reconnect Desk, or switch the desk off, wait for \"not found\", switch it on"
         }
         deskLabel.stringValue = "Desk: " + desk
         var logic = status.logicRunning ? "running" + Self.since(status.logicChangedAt) : "not running" + Self.since(status.logicChangedAt)
@@ -296,6 +307,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             } else {
                 logic += ", nothing received yet"
             }
+            if status.logicDeaf {
+                logic += status.midiServerRestartedAt != nil ? ". NOT answering: quit it and open it again" : ". NOT answering the bridge"
+            }
         }
         logicLabel.stringValue = "\(status.hostName): " + logic
         bridgeLabel.stringValue = "Bridge: " + (status.running ? "running" : "stopped")
@@ -304,7 +318,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         restartButton.isEnabled = status.running
         reconnectButton.isEnabled = status.running && status.desk != .notFound
 
-        if status.running, status.logicRunning, !status.logicTalking {
+        if status.running, status.logicRunning, let lost = status.midiServerRestartedAt {
+            helpLabel.stringValue = """
+                The MIDI server restarted at \(BridgeService.clock(lost)) while \(status.hostName) was open, so \(status.hostName) \
+                lost its MIDI ports and cannot hear or reach the bridge. Quit \(status.hostName) and open it again; \
+                the desk refills by itself.
+                """
+        } else if status.running, status.logicRunning, !status.logicTalking {
             helpLabel.stringValue = """
                 \(status.hostName) is running but has not sent anything to the bridge. Set it up once: \
                 Control Surfaces > Setup > New > Install > Mackie Designs > Mackie Control, \
@@ -330,10 +350,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 notifier.post("Desk lost", "\(old.deskName) is off or unplugged. The bridge reconnects when it is back.")
             }
         }
+        if old.desk != .deaf, new.desk == .deaf {
+            Preferences.play(Preferences.lostSound)
+            if Preferences.bool(Preferences.notifyDeskLost) {
+                notifier.post("Desk not responding", "\(new.deskName) is not taking commands. Switch it off, wait for \"not found\", and switch it on.")
+            }
+        }
+        if old.stuckAt == nil, let at = new.stuckAt {
+            Preferences.play(Preferences.lostSound)
+            if Preferences.bool(Preferences.notifyDeskLost) {
+                let what = "\(new.deskName) stopped taking commands at \(BridgeService.clock(at)): its faders spring back when released."
+                notifier.post("Desk stopped following",
+                              new.desk == .notFollowing
+                                ? what + " Use Reconnect Desk, or switch it off and on."
+                                : what + " The bridge is reconnecting it.")
+            }
+        }
         if old.desk != .connected, new.desk == .connected {
             Preferences.play(Preferences.connectSound)
             if Preferences.bool(Preferences.notifyDeskBack) {
                 notifier.post("Desk connected", "\(new.deskName) is awake and following \(new.hostName).")
+            }
+        }
+        if !old.logicDeaf, new.logicDeaf {
+            Preferences.play(Preferences.lostSound)
+            if Preferences.bool(Preferences.notifyLogicSilent) {
+                if new.midiServerRestartedAt != nil {
+                    notifier.post("\(new.hostName) needs reopening",
+                                  "The MIDI server restarted while \(new.hostName) was open, so it lost its MIDI ports. Quit it and open it again.")
+                } else {
+                    notifier.post("\(new.hostName) is not answering",
+                                  "The bridge announced the desk and nothing came back. Open a project, and check the Mackie Control setup and MIDI inputs.")
+                }
             }
         }
         if !new.logicRunning { silentWarnedFor = nil }
@@ -369,8 +417,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         appendLog("002 Bridge \(version) started \(Date()); log file \(url.path); debug log \(service.verbose ? "on" : "off")")
     }
 
-    private func appendLog(_ line: String) {
-        logFile?.write(Data((line + "\n").utf8))
+    /// Serialises writes from the service's queue and the main thread.
+    private let logQueue = DispatchQueue(label: "bridge.log")
+
+    private func writeLog(_ line: String) {
+        logQueue.sync { logFile?.write(Data((line + "\n").utf8)) }
+    }
+
+    private func appendLog(_ line: String, toFile: Bool = true) {
+        if toFile { writeLog(line) }
         logLines.append(line)
         // Appending keeps the window responsive with traffic logged; the view is only
         // rebuilt when old lines are dropped.
@@ -539,11 +594,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         if !status.running {
             colour = .systemGray; state = "stopped"
         } else {
+            if status.logicDeaf {
+                colour = .systemRed
+                state = status.midiServerRestartedAt != nil
+                    ? "\(status.hostName) lost its MIDI ports: quit it and open it again"
+                    : "\(status.hostName) is not answering the bridge"
+            } else {
             switch status.desk {
             case .connected: colour = .systemGreen; state = "desk connected"
-            case .waking: colour = .systemYellow; state = "desk waking"
+            case .waking, .settling: colour = .systemYellow; state = status.stuckAt == nil ? "desk waking" : "desk stopped following; reconnecting it"
+            case .deaf: colour = .systemRed; state = "desk not taking commands: switch it off and on"
+            case .notFollowing: colour = .systemRed; state = "desk not following: use Reconnect Desk, or switch it off and on"
             case .standby: colour = .systemOrange; state = "desk in standby"
             case .notFound: colour = .systemRed; state = "desk not found"
+            }
             }
         }
         let title = NSMutableAttributedString(string: "002 ")

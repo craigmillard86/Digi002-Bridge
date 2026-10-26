@@ -32,6 +32,8 @@ file that cannot be parsed is reported and ignored.
   "nudgeModeAtStart": false,
   "armedSelectRed": false,
   "deskWakeSeconds": 5,
+  "holdAudioEngine": true,
+  "reconnectWhenStuck": true,
   "hostBundleID": "com.apple.logic10"
 }
 ```
@@ -94,6 +96,8 @@ the Shift one if the usual function is `none`.
 | `nudgeModeAtStart` | `false` | The nav pad's ◀ ▶ move the bank by one track from the start, until Bank is pressed. |
 | `armedSelectRed` | `false` | A record-armed track lights its SEL button red (orange when also selected) as well as the small Record Ready LED. |
 | `deskWakeSeconds` | `5` | How long the bridge waits after connecting before the desk accepts commands. The desk drops anything sent earlier. 1 to 30. |
+| `holdAudioEngine` | `true` | Run a silent audio stream on the desk while connected. Avid's driver carries MIDI to the desk inside the audio stream, so nothing reaches the desk while no program runs its audio engine, and once the driver has stalled on that it stays stalled until the desk is power cycled. Pro Tools keeps the engine running all session; so does the bridge with this on. It does not stop Logic using the desk for audio at the same time. Turn it off only if the desk's audio device is used in a way that conflicts. |
+| `reconnectWhenStuck` | `true` | Reconnect the desk by itself when it has stopped following Logic. The bridge notices this from the faders: a desk that is taking commands holds a fader where it was left, while one that has stopped drags it back after it is released. Two such snap-backs within a minute count, and the bridge then drops the desk and takes it again (about 15 seconds, after which it refills), which clears the state. If it happens again within five minutes the bridge gives up and says to power cycle the desk. With this off, the window and a notification say so and Reconnect Desk does the same by hand. |
 | `hostBundleID` | `com.apple.logic10` | The application the desk is connected for. Any program that speaks Mackie Control on the "003 MCU" port works; the bridge connects the desk while that program runs. Find a bundle ID with `osascript -e 'id of app "Name"'`, or use "Choose App…" in Settings. |
 
 ## App settings

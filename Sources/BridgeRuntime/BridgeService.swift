@@ -16,8 +16,18 @@ public final class BridgeService {
     public enum DeskState: Equatable {
         case notFound    // no Avid device with a control port on this Mac
         case standby     // found, not connected (Logic is not running)
+        case settling    // found and wanted, but released or switched on too recently to take again
         case waking      // connected, waiting for the desk to accept commands
         case connected
+        /// Connected, but the desk is not taking commands: the driver's buffer to it has
+        /// filled and every message now takes a second to be dropped. Only switching the
+        /// desk off and on clears it. Seen after the desk was taken again within a few
+        /// seconds of being released, while it was still going to standby.
+        case deaf
+        /// Connected, but the desk has stopped following: its faders spring back after they
+        /// are released, so it is not taking commands. Reconnecting clears it (the bridge
+        /// does that by itself unless told not to, or until it stops working).
+        case notFollowing
     }
 
     public struct Status: Equatable {
@@ -39,6 +49,16 @@ public final class BridgeService {
         public var logicTalking = false
         /// When Logic last sent anything, to the second.
         public var lastMessageAt: Date?
+        /// Logic is running but did not answer the bridge's last announcement. A live Logic
+        /// answers within a few milliseconds, so this means its MIDI ports are dead (see
+        /// `midiServerRestartedAt`), no project is open, or the surface is not set up.
+        public var logicDeaf = false
+        /// When the MIDI server went away while Logic was open. Logic's ports went with
+        /// it and it sends and hears nothing until it is quit and opened again.
+        public var midiServerRestartedAt: Date?
+        /// When the desk was last noticed to have stopped following (see `StuckDetector`),
+        /// until it is connected again.
+        public var stuckAt: Date?
         public var lastError: String?
 
         public init() {}
@@ -68,9 +88,32 @@ public final class BridgeService {
     /// and the delay before the replay is repeated.
     static let replaySpacingSeconds = 0.008
     static let replayRepeatSeconds = 3.0
+    /// The desk takes a few seconds to go to standby after a client releases it, and to
+    /// settle after it is switched on. A client arriving in that window has left it deaf
+    /// (see `DeskState.deaf`), so no connection is made until this long after either.
+    static let settleSeconds = 10.0
+    /// A send that takes longer than this is waiting on the driver's full buffer.
+    static let slowSendSeconds = 0.5
     /// The desk and Logic are looked for this often, in ticks of `Bridge.tickSeconds`.
     static let checkTicks = 10
     static let logicSilentSeconds = 5.0
+    /// Logic answers an announcement in well under a second; nothing in this long means
+    /// it never got it.
+    static let probeAnswerSeconds = 3.0
+    /// How often a silent Logic is announced to again while the desk is sending it events.
+    static let probeRepeatSeconds = 60.0
+    /// Desk events going to a Logic that has been quiet this long prompt a probe.
+    static let probeSilentSeconds = 20.0
+    /// Device queries within this long of the last announcement are not answered again:
+    /// Logic asks several times in a burst, and each answer makes it re-send its state.
+    static let announceGapSeconds = 1.0
+    /// Fader snap-backs (see `StuckDetector`) within the window before the desk counts as
+    /// stuck; one on its own can be a fluke.
+    static let stuckStrikesNeeded = 2
+    static let stuckStrikeWindowSeconds = 60.0
+    /// Reconnects of a stuck desk within the window before the bridge stops trying.
+    static let stuckReconnectsBeforeGivingUp = 2
+    static let stuckReconnectWindowSeconds = 300.0
     /// The serial this surface reports in the Mackie Control handshake ("002BRG", 7 bytes).
     static let serial: [UInt8] = Array("002BRGE".utf8)
     static let challenge: [UInt8] = [0x01, 0x02, 0x03, 0x04]
@@ -98,11 +141,19 @@ public final class BridgeService {
     /// as it exists, whatever its ports do, so this one is created when Logic starts and
     /// destroyed when Logic quits; only then does the desk go to standby.
     private var deskConnection: MIDIConnection?
+    /// The desk's audio engine, run silently while connected (see `DeskAudio`).
+    private let deskAudio = DeskAudio()
+    static let audioReleaseSeconds = 1.0
     private var logicPort: VirtualPort?
     private var deskSource: Endpoint?
     private var deskDestination: Endpoint?
     private var deskConnected = false
     private var deskAwake = false
+    private var deskDeaf = false
+    /// When the desk was last released or appeared, for `settleSeconds`.
+    private var deskReleasedAt = Date.distantPast
+    private var settleAnnounced = false
+    private var restarting = false
     private var wakeGeneration = 0
     private var bridge: Bridge
     private var surfaceDecoder = SurfaceDecoder()
@@ -110,7 +161,15 @@ public final class BridgeService {
     private var ticker: DispatchSourceTimer?
     private var ticks = 0
     private var lastFromLogic = Date.distantPast
+    /// When the last announcement went to Logic and is still unanswered.
+    private var probeSentAt: Date?
+    private var lastProbeAt = Date.distantPast
+    /// Set when the MIDI server went away with Logic open; kept across the restart.
+    private var logicPortsLostAt: Date?
     private var lastMeterLog = Date.distantPast
+    private var stuckDetector = StuckDetector()
+    private var stuckStrikes: [Date] = []
+    private var stuckReconnects: [Date] = []
     private let startTime = Date()
 
     public init(verbose: Bool = true, config: BridgeConfig = .default) {
@@ -130,6 +189,9 @@ public final class BridgeService {
             status.hostName = Self.hostName(for: config.hostBundleID)
             bridge = Bridge(config: config)
             log("settings applied")
+            if deskConnected {
+                if config.holdAudioEngine { holdAudio() } else { releaseAudio() }
+            }
             if hostChanged {
                 if deskConnected { disconnectDesk() }
                 check()
@@ -146,8 +208,11 @@ public final class BridgeService {
     /// Drops the desk connection and makes it again, for when the desk looks stuck.
     public func reconnectDesk() {
         queue.async { [self] in
+            stuckStrikes = []
+            stuckReconnects = []
+            status.stuckAt = nil
             if deskConnected { disconnectDesk() }
-            log("reconnecting the desk")
+            log("reconnecting the desk once it has settled")
             check()
         }
     }
@@ -169,6 +234,9 @@ public final class BridgeService {
                 status.lastError = error.errorDescription
                 log("not started: \(error.errorDescription ?? "")")
                 throw error
+            }
+            deskAudio.onEvent = { [weak self] text in
+                self?.queue.async { self?.log("desk audio: \(text)") }
             }
             // A port appearing or going (the desk switched on or off) is acted on at once
             // rather than at the next poll.
@@ -224,10 +292,30 @@ public final class BridgeService {
     private func tick() {
         ticks += 1
         emit(bridge.tick())
+        for snapBack in stuckDetector.confirmed(at: Date()) { noteSnapBack(snapBack) }
         if ticks % Self.checkTicks == 0 { check() }
     }
 
     private func check() {
+        guard !restarting else { return }
+        // The MIDI server can crash (Avid's driver takes it down when the desk is switched
+        // off with its buffer full). Every port then goes, this process's client with them,
+        // and the only way back is a fresh client: the bridge restarts itself.
+        let sources = Endpoints.sources()
+        if logicPort != nil, !sources.contains(where: { $0.displayName == Self.virtualPortName && $0.deviceName.isEmpty }) {
+            restarting = true
+            log("the MIDI server has gone away (\(sources.isEmpty ? "no ports at all" : "the bridge's own port is missing")); restarting the bridge")
+            if status.logicRunning {
+                logicPortsLostAt = Date()
+                log("\(status.hostName) was open, so its MIDI ports went with the server: it must be quit and opened again")
+            }
+            DispatchQueue.global().asyncAfter(deadline: .now() + 2) { [weak self] in
+                guard let self else { return }
+                do { try self.restart() } catch { self.report("restart after the MIDI server went away failed: \(error)") }
+                self.queue.async { self.restarting = false }
+            }
+            return
+        }
         // The desk's ports come and go with its power switch (Avid's driver removes them
         // when the desk is off and creates new ones when it is back), so they are looked
         // up every time rather than once.
@@ -242,6 +330,8 @@ public final class BridgeService {
             status.deskName = source.displayName
             status.desk = .standby
             needsClean = true
+            deskReleasedAt = Date()
+            settleAnnounced = false
             log("desk found: \(source.displayName)")
         } else if deskSource == nil {
             status.desk = .notFound
@@ -250,13 +340,44 @@ public final class BridgeService {
         if logicRunning != status.logicRunning {
             status.logicRunning = logicRunning
             log(logicRunning ? "\(status.hostName) is running" : "\(status.hostName) is not running; the desk stays in standby until it starts")
+            if !logicRunning {
+                // Whatever was wrong with Logic's ports goes with it.
+                logicPortsLostAt = nil
+                probeSentAt = nil
+                status.logicDeaf = false
+            }
+        }
+        status.midiServerRestartedAt = logicRunning ? logicPortsLostAt : nil
+        if let stream = deskAudio.checkStream() { log(stream) }
+        if logicRunning, let lost = logicPortsLostAt, lastProbeAt < lost {
+            announceToLogic()   // the one way to find out whether Logic still hears the bridge
+        }
+        if let sent = probeSentAt, logicRunning, Date().timeIntervalSince(sent) > Self.probeAnswerSeconds {
+            probeSentAt = nil
+            if !status.logicDeaf {
+                status.logicDeaf = true
+                if let lost = logicPortsLostAt {
+                    report("\(status.hostName) has not answered the bridge: its MIDI ports went with the MIDI server at \(Self.clock(lost)). Quit \(status.hostName) and open it again")
+                } else {
+                    report("\(status.hostName) is running but has not answered the bridge: check that a project is open, that the Mackie Control's ports are \"\(Self.virtualPortName)\", and that \"\(Self.virtualPortName)\" is ticked in Settings > MIDI > Inputs")
+                }
+            }
         }
         status.lastMessageAt = lastFromLogic == .distantPast ? nil : lastFromLogic
-        if logicRunning, !deskConnected, deskSource != nil { connectDesk() }
+        let wantDesk = deskSource != nil && !deskConnected && (logicRunning || needsClean)
+        let settleLeft = Self.settleSeconds - Date().timeIntervalSince(deskReleasedAt)
+        if wantDesk, settleLeft > 0 {
+            status.desk = .settling
+            if !settleAnnounced {
+                settleAnnounced = true
+                log("letting the desk settle for \(Int(settleLeft.rounded(.up))) s before connecting")
+            }
+        } else if wantDesk {
+            // A desk just found with Logic closed may still show whatever was last written
+            // to it (the driver wakes it briefly when it loads), so it is wiped once.
+            connectDesk(toClean: !logicRunning)
+        }
         if !logicRunning, deskConnected, !cleaning { disconnectDesk() }
-        // A desk just found with Logic closed may still show whatever was last written
-        // to it (the driver wakes it briefly when it loads), so it is wiped once.
-        if !logicRunning, !deskConnected, deskSource != nil, needsClean { connectDesk(toClean: true) }
         status.logicTalking = logicRunning && Date().timeIntervalSince(lastFromLogic) < Self.logicSilentSeconds
     }
 
@@ -280,10 +401,13 @@ public final class BridgeService {
         }
         deskConnected = true
         deskAwake = false
+        deskDeaf = false
+        stuckDetector = StuckDetector()
         status.desk = .waking
         wakeGeneration += 1
         let generation = wakeGeneration
         log("desk connected\(toClean ? " to wipe it" : ""), waiting \(config.deskWakeSeconds) s for it to wake")
+        holdAudio()
         queue.asyncAfter(deadline: .now() + config.deskWakeSeconds) { [weak self] in
             guard let self, self.deskConnected, generation == self.wakeGeneration else { return }
             self.deskAwake = true
@@ -292,6 +416,7 @@ public final class BridgeService {
                 return
             }
             self.status.desk = .connected
+            self.status.stuckAt = nil
             self.replayState(generation: generation)
             self.announceToLogic()
             // The desk has dropped a replay sent the moment it woke, so it is sent again.
@@ -299,6 +424,67 @@ public final class BridgeService {
                 guard let self, self.deskAwake, generation == self.wakeGeneration else { return }
                 self.replayState(generation: generation)
             }
+        }
+    }
+
+    /// Keeps the desk's audio engine running for as long as the bridge is connected, or
+    /// says why nothing will reach the desk if that is turned off.
+    private func holdAudio() {
+        guard let device = DeskAudio.findDevice() else {
+            log("the desk's audio device was not found; MIDI to the desk needs its audio engine running")
+            return
+        }
+        let running = DeskAudio.isRunning(device)
+        guard config.holdAudioEngine else {
+            if !running {
+                log("warning: nothing is running the desk's audio engine, so nothing sent to the desk will arrive until something does (Settings > Keep the desk's audio engine running)")
+            } else {
+                log("the desk's audio engine is running (another program holds it); MIDI to the desk rides on it")
+            }
+            return
+        }
+        guard !deskAudio.holding else { return }
+        do {
+            try deskAudio.start()
+            log(running ? "desk audio engine held (something else was running it too)" : "desk audio engine started; MIDI to the desk rides on it")
+        } catch {
+            report("could not run the desk's audio engine: \(error); MIDI to the desk may not get through")
+        }
+    }
+
+    private func releaseAudio() {
+        guard deskAudio.holding else { return }
+        deskAudio.stop()
+        log("desk audio engine released")
+    }
+
+    /// A fader sprang back after it was released (see `StuckDetector`). One can be a
+    /// fluke; two within a minute mean the desk has stopped taking commands.
+    private func noteSnapBack(_ snapBack: StuckDetector.SnapBack) {
+        let now = Date()
+        log("fader \(snapBack.channel + 1) sprang back from \(snapBack.released) to \(snapBack.reported) after it was released: the desk did not take the position it was given")
+        stuckStrikes = stuckStrikes.filter { now.timeIntervalSince($0) < Self.stuckStrikeWindowSeconds } + [now]
+        guard stuckStrikes.count >= Self.stuckStrikesNeeded else { return }
+        stuckStrikes = []
+        deskStuck(at: now)
+    }
+
+    /// The desk has stopped following. A reconnect clears it (Avid's driver stops and
+    /// starts the desk's surface link as the client goes and comes back), so that is done
+    /// by itself unless the setting is off or it keeps happening.
+    private func deskStuck(at now: Date) {
+        stuckReconnects = stuckReconnects.filter { now.timeIntervalSince($0) < Self.stuckReconnectWindowSeconds }
+        if config.reconnectWhenStuck, stuckReconnects.count < Self.stuckReconnectsBeforeGivingUp {
+            stuckReconnects.append(now)
+            status.stuckAt = now
+            report("the desk has stopped following \(status.hostName) (faders spring back when released): reconnecting it")
+            disconnectDesk(wipe: false, toReconnect: true)
+        } else {
+            status.desk = .notFollowing
+            status.stuckAt = now
+            report(config.reconnectWhenStuck
+                ? "the desk has stopped following \(status.hostName) again, after \(stuckReconnects.count) reconnects in \(Int(Self.stuckReconnectWindowSeconds / 60)) min: switch it off, wait for \"not found\", and switch it on"
+                : "the desk has stopped following \(status.hostName) (faders spring back when released): use Reconnect Desk, or switch it off and on")
         }
     }
 
@@ -319,8 +505,19 @@ public final class BridgeService {
     /// when the bridge starts while Logic is already open; harmless otherwise.
     private func announceToLogic() {
         sendToLogic(.connectionQuery(serial: Self.serial, challenge: Self.challenge))
-        log("announced the surface to Logic")
+        let now = Date()
+        lastProbeAt = now
+        if probeSentAt == nil { probeSentAt = now }
+        log("announced the surface to \(status.hostName)")
     }
+
+    private static let clockFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm:ss"
+        return formatter
+    }()
+
+    public static func clock(_ date: Date) -> String { clockFormatter.string(from: date) }
 
     private func sendToLogic(_ message: MCUMessage) {
         do { try logicPort?.send(MCUEncoder.encode(message)) } catch { report("to Logic failed: \(error)") }
@@ -346,11 +543,12 @@ public final class BridgeService {
         deskSource = nil
         deskDestination = nil
         needsClean = false
+        deskDeaf = false
         status.desk = .notFound
         log("desk lost: \(name) is off or unplugged; waiting for it to come back")
     }
 
-    private func disconnectDesk(wipe: Bool = true) {
+    private func disconnectDesk(wipe: Bool = true, toReconnect: Bool = false) {
         guard deskConnected else { return }
         if wipe { clearDesk() }
         // Releasing the desk takes the source disconnect, the ports and the client going,
@@ -359,6 +557,8 @@ public final class BridgeService {
         deskConnection = nil
         deskConnected = false
         deskAwake = false
+        deskReleasedAt = Date()
+        settleAnnounced = false
         let wasCleaning = cleaning
         cleaning = false
         needsClean = false
@@ -366,23 +566,49 @@ public final class BridgeService {
         surfaceDecoder = SurfaceDecoder()
         onSurface?(bridge.startup())
         if status.desk != .notFound { status.desk = .standby }
-        if !wipe { log("desk disconnected without a wipe; its ports are gone") }
+        if toReconnect { log("desk disconnected to take it afresh once it has settled") }
+        else if !wipe { log("desk disconnected without a wipe; its ports are gone") }
         else if wasCleaning { log("desk wiped and released; it goes back to standby") }
         else { log("desk wiped and disconnected; it goes back to standby") }
+        // The wipe is still on its way through the driver; the engine carries it first.
+        queue.asyncAfter(deadline: .now() + (wipe ? Self.audioReleaseSeconds : 0)) { [weak self] in
+            guard let self, !self.deskConnected else { return }
+            self.releaseAudio()
+        }
     }
 
     // MARK: Traffic
 
     private func receiveFromDesk(_ bytes: [UInt8]) {
+        var sentToLogic = false
+        let now = Date()
         for event in surfaceDecoder.decode(bytes) {
+            if deskAwake { stuckDetector.surface(event, at: now) }
             let out = bridge.fromSurface(event)
             trace("desk -> \(event) => Logic \(out.toLogic)")
             deliver(out)
+            sentToLogic = sentToLogic || !out.toLogic.isEmpty
+        }
+        // Desk events going to a Logic that has said nothing for a while: announce the
+        // surface again, which a live Logic answers at once and a deaf one never does.
+        if sentToLogic, status.logicRunning, probeSentAt == nil,
+           now.timeIntervalSince(lastFromLogic) > Self.probeSilentSeconds,
+           now.timeIntervalSince(lastProbeAt) > Self.probeRepeatSeconds {
+            announceToLogic()
         }
     }
 
     private func receiveFromLogic(_ bytes: [UInt8]) {
         lastFromLogic = Date()
+        probeSentAt = nil
+        if status.logicDeaf {
+            status.logicDeaf = false
+            log("\(status.hostName) is answering again")
+        }
+        if logicPortsLostAt != nil {
+            logicPortsLostAt = nil     // it got through, so Logic has new ports
+            status.midiServerRestartedAt = nil
+        }
         let messages = mcuDecoder.decode(bytes)
         if messages.isEmpty {
             trace("Logic -> (unhandled) \(Hex.format(bytes))")
@@ -391,8 +617,12 @@ public final class BridgeService {
             // The handshake is the service's business, not the translator's.
             switch message {
             case .deviceQuery:
-                trace("Logic -> device query")
-                if deskAwake { announceToLogic() }
+                if deskAwake, Date().timeIntervalSince(lastProbeAt) > Self.announceGapSeconds {
+                    trace("Logic -> device query")
+                    announceToLogic()
+                } else {
+                    trace("Logic -> device query (\(deskAwake ? "just answered" : "desk not awake yet"))")
+                }
                 continue
             case .hostConnectionReply:
                 sendToLogic(.connectionConfirmation(serial: Self.serial))
@@ -456,10 +686,22 @@ public final class BridgeService {
     }
 
     private func sendToDesk(_ commands: [SurfaceCommand]) {
-        guard deskConnected, let connection = deskConnection, let deskDestination else { return }
+        guard deskConnected, !deskDeaf, let connection = deskConnection, let deskDestination else { return }
         for command in commands {
+            stuckDetector.sent(command)
             let bytes = SurfaceEncoder.encode(command)
+            let started = Date()
             do { try connection.send(bytes, to: deskDestination) } catch { report("to desk failed: \(error)") }
+            let took = Date().timeIntervalSince(started)
+            if took > Self.slowSendSeconds {
+                // The driver only blocks the sender once its buffer to the desk is full and
+                // the desk is not emptying it. Nothing more is sent, so the buffer can drain
+                // and the desk can be switched off without taking the MIDI server down.
+                deskDeaf = true
+                status.desk = .deaf
+                report(String(format: "the desk is not taking commands (a message took %.1f s to go): switch the desk off, wait for \"not found\", and switch it on; the bridge then reconnects and refills it", took))
+                return
+            }
         }
     }
 

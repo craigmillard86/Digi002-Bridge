@@ -22,12 +22,17 @@ public enum Endpoints {
     /// The entity name Avid's driver gives the control surface port on every 00x unit.
     public static let controlPortName = "Port 3 (Control)"
 
+    /// Listed on the MIDI thread (see `MIDIThread`), so the list is the current one.
     public static func sources() -> [Endpoint] {
-        (0..<MIDIGetNumberOfSources()).map { describe(MIDIGetSource($0), .source) }
+        (try? MIDIThread.shared.sync {
+            (0..<MIDIGetNumberOfSources()).map { describe(MIDIGetSource($0), .source) }
+        }) ?? []
     }
 
     public static func destinations() -> [Endpoint] {
-        (0..<MIDIGetNumberOfDestinations()).map { describe(MIDIGetDestination($0), .destination) }
+        (try? MIDIThread.shared.sync {
+            (0..<MIDIGetNumberOfDestinations()).map { describe(MIDIGetDestination($0), .destination) }
+        }) ?? []
     }
 
     /// Finds the control surface port by its port name on an Avid/Digidesign device,

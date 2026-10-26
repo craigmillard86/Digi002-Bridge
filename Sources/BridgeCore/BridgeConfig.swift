@@ -200,6 +200,13 @@ public struct BridgeConfig: Equatable, Codable {
     public var armedSelectRed = false
     /// How long to wait after connecting before the desk accepts commands.
     public var deskWakeSeconds = 5.0
+    /// Run a silent audio stream on the desk while connected. Avid's driver only delivers
+    /// MIDI to the desk while its audio engine runs; without this, Logic stopping its
+    /// audio (quitting, changing device) leaves the driver stuck and the desk deaf.
+    public var holdAudioEngine = true
+    /// Reconnect the desk by itself when it has stopped taking commands, which the bridge
+    /// notices from faders springing back after they are released (see `StuckDetector`).
+    public var reconnectWhenStuck = true
     /// The application the desk is connected for, by bundle identifier.
     public var hostBundleID = "com.apple.logic10"
 
@@ -219,7 +226,8 @@ public struct BridgeConfig: Equatable, Codable {
 
     enum CodingKeys: String, CodingKey {
         case buttons, shiftButtons, nameStyle, nameScroll, timeDisplay, valuesInverse, valueDisplaySeconds
-        case meterModeAtStart, nudgeModeAtStart, armedSelectRed, deskWakeSeconds, hostBundleID
+        case meterModeAtStart, nudgeModeAtStart, armedSelectRed, deskWakeSeconds, holdAudioEngine, reconnectWhenStuck
+        case hostBundleID
     }
 
     public init(from decoder: Decoder) throws {
@@ -245,6 +253,8 @@ public struct BridgeConfig: Equatable, Codable {
         nudgeModeAtStart = try c.decodeIfPresent(Bool.self, forKey: .nudgeModeAtStart) ?? defaults.nudgeModeAtStart
         armedSelectRed = try c.decodeIfPresent(Bool.self, forKey: .armedSelectRed) ?? defaults.armedSelectRed
         deskWakeSeconds = try c.decodeIfPresent(Double.self, forKey: .deskWakeSeconds) ?? defaults.deskWakeSeconds
+        holdAudioEngine = try c.decodeIfPresent(Bool.self, forKey: .holdAudioEngine) ?? defaults.holdAudioEngine
+        reconnectWhenStuck = try c.decodeIfPresent(Bool.self, forKey: .reconnectWhenStuck) ?? defaults.reconnectWhenStuck
         hostBundleID = try c.decodeIfPresent(String.self, forKey: .hostBundleID) ?? defaults.hostBundleID
         valueDisplaySeconds = min(max(valueDisplaySeconds, 0.2), 10)
         deskWakeSeconds = min(max(deskWakeSeconds, 1), 30)
@@ -263,6 +273,8 @@ public struct BridgeConfig: Equatable, Codable {
         try c.encode(nudgeModeAtStart, forKey: .nudgeModeAtStart)
         try c.encode(armedSelectRed, forKey: .armedSelectRed)
         try c.encode(deskWakeSeconds, forKey: .deskWakeSeconds)
+        try c.encode(holdAudioEngine, forKey: .holdAudioEngine)
+        try c.encode(reconnectWhenStuck, forKey: .reconnectWhenStuck)
         try c.encode(hostBundleID, forKey: .hostBundleID)
     }
 
